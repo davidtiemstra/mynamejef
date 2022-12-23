@@ -71,6 +71,7 @@ def export_jef(steps, filename):
         if(failure):
             for i in range(16):
                 header += b'\xff'
+            print("Design does not fit in hoop " + str(j[0]*2))
         else:
             for index, i in enumerate(limits):
                 header += numberConverter(j[index] - abs(i))
