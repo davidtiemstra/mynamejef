@@ -6,7 +6,7 @@ import math
 def antdrawer(direction, scale):
     steps = []
 
-    with open('ant_svg2-points.csv', newline='') as csvfile:
+    with open('ant.csv', newline='') as csvfile:
         antreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 
         coords = []
