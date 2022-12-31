@@ -5,23 +5,7 @@ dbg = sys.stderr
 
 # functions
 
-# works up to 256^2-1=65536 rn, stitch count may exceed this eventually
-def numberConverter(number):
-    n = bytearray()
-
-    if(number>255):
-        n.append(number%256)
-        n.append(math.floor(number/256))
-    else:
-        n.append(number)
-        n.append(0)
-
-    n += b'\x00\x00'
-
-    return n
-
-def export_jef(steps, filename):
-
+def findLimits(steps):
     # find max distances (this could also be part of the export code)
     limits = [0,0,0,0]
 
@@ -40,7 +24,41 @@ def export_jef(steps, filename):
             limits[2] = i[0]
         if(i[1]<limits[3]):
             limits[3] = i[1]
+    return limits
 
+# works up to 256^2-1=65536 rn, stitch count may exceed this eventually
+def numberConverter(number):
+    n = bytearray()
+
+    if(number>255):
+        n.append(number%256)
+        n.append(math.floor(number/256))
+    else:
+        n.append(number)
+        n.append(0)
+
+    n += b'\x00\x00'
+
+    return n
+
+def stitchWriter(dist):
+    if (dist<0): 
+        dist = dist + 256
+    return dist
+
+
+def export_jef(steps, center, filename):
+
+    limits = findLimits(steps)
+
+    # center piece
+    if(center):
+        xshift = -1 * round(limits[2] + (limits[0] - limits[2])/2)
+        yshift = -1 * round(limits[3] + (limits[1] - limits[3])/2)
+        steps.insert(0, [xshift, yshift])
+
+        # find new limits
+        limits = findLimits(steps)
 
 
     # part 1 - write header
@@ -71,7 +89,7 @@ def export_jef(steps, filename):
         if(failure):
             for i in range(16):
                 header += b'\xff'
-            print("Design does not fit in hoop " + str(j[0]*2))
+            dbg.write("\nDesign does not fit in hoop " + str(j[0]*2))
         else:
             for index, i in enumerate(limits):
                 header += numberConverter(j[index] - abs(i))
@@ -83,8 +101,8 @@ def export_jef(steps, filename):
     header += b'\x01\x00\x00\x00\x0d\x00\x00\x00'
 
 
-
     # part 2 - write stitches to bytes
+
     # gonna have to do this a bit different if i wanna not start in the center u kno
     stitchdata = bytearray(b'\x00\x00\x00\x00')
 
@@ -94,13 +112,26 @@ def export_jef(steps, filename):
         x = stitch[0]
         y = stitch[1]
 
-        if (x<0): 
-            x = x + 256
-        stitchdata.append(x)
-        
-        if (y<0): 
-            y = y + 256
-        stitchdata.append(y)
+        # make a normal stitch
+        if x<128 and x>-128 and y<128 and y>-128:
+            stitchdata.append(stitchWriter(x))
+            stitchdata.append(stitchWriter(y))
+
+        # make one or more jump stitches
+        else:
+            jumps = math.ceil(max(abs(x),abs(y)) / 127)
+            xjump = math.floor(x/jumps)
+            yjump = math.floor(y/jumps)
+
+            for jump in range(jumps):
+                stitchdata += b'\x80\x02'
+                if(jump<=x%jumps): stitchdata.append(stitchWriter(xjump + 1))
+                else: stitchdata.append(stitchWriter(xjump))
+                
+                if(jump<=y%jumps): stitchdata.append(stitchWriter(yjump + 1))
+                else: stitchdata.append(stitchWriter(yjump))
+
+            stitchdata += b'\x00\x00'
 
 
 
@@ -109,4 +140,4 @@ def export_jef(steps, filename):
     f.write(header + stitchdata + b'\x80\x10')		
     f.close()
 
-    dbg.write("saved to file: %s\n" % (filename))
+    dbg.write("\nsaved to file: %s\n" % (filename))
