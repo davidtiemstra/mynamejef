@@ -3,8 +3,6 @@ import sys
 
 dbg = sys.stderr
 
-# functions
-
 def findLimits(steps):
     # find max distances (this could also be part of the export code)
     limits = [0,0,0,0]
@@ -26,18 +24,14 @@ def findLimits(steps):
             limits[3] = i[1]
     return limits
 
-# works up to 256^2-1=65536 rn, stitch count may exceed this eventually
+# works up to 256^2-1=65535 rn, stitch count may exceed this eventually
 def numberConverter(number):
     n = bytearray()
 
-    if(number>255):
-        n.append(number%256)
-        n.append(math.floor(number/256))
-    else:
-        n.append(number)
-        n.append(0)
-
-    n += b'\x00\x00'
+    n.append(number%256)
+    n.append(math.floor(number/256)%256)
+    n.append(math.floor(number/65536)%256)
+    n.append(math.floor(number/4294967296)%256)
 
     return n
 
