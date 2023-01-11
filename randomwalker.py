@@ -21,4 +21,4 @@ for n in range(60):
     
     steps += antdrawer.antdrawer(direction - 0.5 * math.pi, antscale)
 
-    jefgenerator.export_jef(steps, 'randomwalk' + str(n) + '.jef')
+    jefgenerator.export_jef(steps, True, 'randomwalkcentered' + str(n) + '.jef')
