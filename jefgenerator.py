@@ -97,8 +97,13 @@ def export_jef(steps, center, filename):
 
     # part 2 - write stitches to bytes
 
-    # gonna have to do this a bit different if i wanna not start in the center u kno
-    stitchdata = bytearray(b'\x00\x00\x00\x00')
+    if center:
+        stitchdata = bytearray(b'\x80\x02\x00\x00')
+        
+    else:
+        stitchdata = bytearray(b'\x00\x00\x00\x00')
+
+    prev0 = False
 
     # currently this only works with steps that are already chill
     for stitch in steps:
@@ -106,13 +111,26 @@ def export_jef(steps, center, filename):
         x = stitch[0]
         y = stitch[1]
 
+        # make trim
+        if x == 0 and y == 0:
+            if prev0:
+                stitchdata += b'\x80\x02\x00\x00'
+                prev0 = False
+            else:
+                prev0 = True    
+
         # make a normal stitch
-        if x<128 and x>-128 and y<128 and y>-128:
+        elif x<128 and x>-128 and y<128 and y>-128:
+            prev0 = False
+
             stitchdata.append(stitchWriter(x))
             stitchdata.append(stitchWriter(y))
+            
 
         # make one or more jump stitches
         else:
+            prev0 = False
+
             jumps = math.ceil(max(abs(x),abs(y)) / 127)
             xjump = math.floor(x/jumps)
             yjump = math.floor(y/jumps)

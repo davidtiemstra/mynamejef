@@ -1,15 +1,14 @@
 import  math
 
+# write a different S function!!
+# do something to make non-uniform scaling not mess up the stitch distance
+
 def drawLetter(letter, width, height, stitchdist):
     # outputs coordinates for each step of the letter as float
     steps = []
 
     stitchdist /= height
     height *= 0.5
-
-    # this is wrong the amount of segments shouldnt be defined this should be the length 
-    # and then the closest approximate amount of steps should be based on that
-    # to do this we need the length value for each line ;_;
 
     if letter.capitalize() == 'A':
         # get coords for all lines of the letter
@@ -281,20 +280,40 @@ def drawLetter(letter, width, height, stitchdist):
             t = step / segments
             steps.append([width * (t), height * (1-t)])
             
+    # i really need to write a different S function lol this is insane
     if letter.capitalize() == 'S':
+        steps.append([0,0])
         segments = round(2.063598766736312 / stitchdist)
+        prevx = 0
+        prevy = 0
         for step in range(segments+1):
             t = step / segments
             t = t**2 / (2.0 * (t**2 - t) + 1.0)
             t2 = max(t,0.0796)
-            steps.append([width * (math.sqrt(math.sin(math.pi*(1-t2)+0.25))), height * (1+(1.016*(math.cos(math.pi*(1-t)+0.25)-1)/2+0.016))])
             
+            x = width * (math.sqrt(math.sin(math.pi*(1-t2)+0.25)))
+            y = height * (1+(1.016*(math.cos(math.pi*(1-t)+0.25)-1)/2+0.016))
+            if(round(x) - round(prevx) != 0 or round(y) - round(prevy) != 0):
+                steps.append([x,y])
+            
+            prevx = x
+            prevy = y
+
+        prevx = 0
+        prevy = 0    
         for step in range(segments+1):
             t = step / segments
             t = t**2 / (2.0 * (t**2 - t) + 1.0)
             t2 = min(t,0.9204)
-            steps.append([width * (1-math.sqrt(math.sin(math.pi*t2+0.25))), height * (-1.016*math.cos(math.pi*t+0.25)/2+1.492)])
+
+            x = width * (1-math.sqrt(math.sin(math.pi*t2+0.25)))
+            y = height * (-1.016*math.cos(math.pi*t+0.25)/2+1.492)
+            if(round(x) - round(prevx) != 0 or round(y) - round(prevy) != 0):
+                steps.append([x,y])
             
+            prevx = x
+            prevy = y
+
     if letter.capitalize() == 'T':
         segments = round(1.0 / stitchdist)
         for step in range(segments+1):
