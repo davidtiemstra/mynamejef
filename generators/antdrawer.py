@@ -1,4 +1,3 @@
-import jefgenerator
 import csv
 import math
 
@@ -6,7 +5,7 @@ import math
 def antdrawer(direction, scale):
     steps = []
 
-    with open('ant.csv', newline='') as csvfile:
+    with open('../experiment output/ant.csv', newline='') as csvfile:
         antreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 
         coords = []

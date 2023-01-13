@@ -2,7 +2,7 @@
 # get .fa file from ("https://amtdb.org/static_md5/data/fasta/" + identifier + ".fa")
 # literally just read it as text and embroider the letters (actg) in a longass string. 
 
-import jefgenerator
+from helpers import jefgenerator
 import urllib3
 import csv
 import drawletter

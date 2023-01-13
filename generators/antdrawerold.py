@@ -1,4 +1,4 @@
-import jefgenerator
+from helpers import jefgenerator
 import csv
 
 # do randomwalk (keep in same file for now)
@@ -9,7 +9,7 @@ import csv
 
 steps = []
 
-with open('ant4.csv', newline='') as csvfile:
+with open('../experiment output/ant4.csv', newline='') as csvfile:
     antreader = csv.reader(csvfile, delimiter=',', quotechar='|')
 
     temp = []

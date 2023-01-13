@@ -1,5 +1,5 @@
-import jefgenerator
-import drawletter
+from helpers import jefgenerator
+from generators import drawletter
 
 string = "electric tea"
 title = 'text160'
@@ -88,4 +88,4 @@ for index, character in enumerate(string):
     steps += [[0,0],[0,0]]
     prev = [prev[0] - size - 20, prev[1]]
 
-jefgenerator.export_jef(steps, True, 'experiment output\\'+title+'.jef')
+jefgenerator.export_jef(steps, True, 'experiment output\\' + title + '.jef')

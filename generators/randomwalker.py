@@ -1,7 +1,7 @@
-import jefgenerator
+from helpers import jefgenerator
 import noise
 import math
-import antdrawer
+from generators import antdrawer
 
 # do randomwalk (keep in same file for now)
 
