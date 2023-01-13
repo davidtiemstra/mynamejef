@@ -1,5 +1,6 @@
 from helpers import pathviewer
 import random
+from generators import dnadrawer
 
 if __name__ == "__main__":
 
