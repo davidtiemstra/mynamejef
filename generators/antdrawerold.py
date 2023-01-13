@@ -9,7 +9,7 @@ import csv
 
 steps = []
 
-with open('../experiment output/ant4.csv', newline='') as csvfile:
+with open('../experiment_files/ant4.csv', newline='') as csvfile:
     antreader = csv.reader(csvfile, delimiter=',', quotechar='|')
 
     temp = []
