@@ -11,4 +11,4 @@
 - All test scripts or works in progress belong in the 'test_scripts' directory.
 
 <br>
-When working on a script, all code should be executed from main.py and main.py should be cleaned before pushing to Github.
+When working on a script, all code should be executed from main.py and main.py should be cleaned before pushing to Github. When a test script is no longer used make sure it is deleted from the repository.
