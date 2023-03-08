@@ -96,13 +96,13 @@ def export_dst(stitches, filename):
     # writing the stitches
     for stitch in stitches:
         #check for jump stitch
-        if abs(max(stitch[0],stitch[1])) < 122:
+        if max(abs(stitch[0]),abs(stitch[1])) < 122:
             stitchdata += encodeStitch(stitch, False)
         else:
-            jumps = math.floor(max(abs(stitch[0]), abs(stitch[1]))/121)
+            jumps = math.ceil(max(abs(stitch[0]), abs(stitch[1]))/121)
             jumpcount += jumps
             for i in range(jumps):
-                stitchdata += encodeStitch([int(stitch[0]/(jumps+1)), int(stitch[1]/(jumps+1))], True)
+                stitchdata += encodeStitch([int(stitch[0]/(jumps)), int(stitch[1]/(jumps))], True)
             stitchdata += encodeStitch([stitch[0]%jumps, stitch[1]%jumps], False)
 
     # mandatory end triplet
@@ -134,9 +134,7 @@ def export_dst(stitches, filename):
     for i in range(384):
         header += b'\x20'
 
-
     # exporting as file
     f = open(filename + ".dst", "wb")
     f.write(header + stitchdata)		
     f.close()
-
