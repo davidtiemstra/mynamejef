@@ -9,16 +9,17 @@ from generators import antdrawer
 # noise.snoise2(i, 0, 4, 5.0, 0.40)
 # right now i have about 3 shifts over 42 points so lets say 15 per thing. decrease lacunarity to make it shift slower
 
-stepsize = 40
-antscale = 1.5
+def randomwalker():
+    stepsize = 40
+    antscale = 1.5
 
-for n in range(60):
-    steps = []
-    direction = 0.0
-    for i in range(100):
-        direction += noise.snoise2(50*n + i, 0, 4, 5.0, 0.40,) * 0.75
-        steps.append([round(stepsize * math.cos(direction)), round(stepsize * math.sin(direction))])
-    
-    steps += antdrawer.antdrawer(direction - 0.5 * math.pi, antscale)
+    for n in range(10):
+        steps = []
+        direction = 0.0
+        for i in range(100):
+            direction += noise.snoise2(50*n + i, 0, 4, 5.0, 0.40,) * 0.75
+            steps.append([round(stepsize * math.cos(direction)), round(stepsize * math.sin(direction))])
+        
+        steps += antdrawer.antdrawer(direction - 0.5 * math.pi, antscale)
 
-    jefgenerator.export_jef(steps, True, 'randomwalkcentered' + str(n) + '.jef')
+        jefgenerator.export_jef(steps, True, 'experiment_output/randomwalkcentered' + str(n) + '.jef')

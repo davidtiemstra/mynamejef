@@ -1,5 +1,5 @@
 from helpers import jefgenerator
-from generators import drawletter
+from helpers import drawletter
 
 string = "electric tea"
 title = 'text160'
