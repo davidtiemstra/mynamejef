@@ -1,5 +1,6 @@
 from helpers import pathviewer
 from helpers import horizontalfill
+from helpers import satinstitch
 import random
 from generators import dnadrawer
 
