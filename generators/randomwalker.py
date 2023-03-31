@@ -26,14 +26,20 @@ def randomWalkAnt():
         jefgenerator.export_jef(steps, True, 'experiment_output/randomwalkcentered' + str(n) + '.jef')
 
 
-def randomwalker(length, stepsize=50, direction=0.0, seed=False):
+def randomwalker(length, stepsize=50, direction=0.0, seed=False, absolute=False):
     steps = []
 
     if(seed==False):
         seed = 1000 * random.random()
 
-    for i in range(100):
+    for i in range(length):
         direction += noise.snoise2(seed+i, 0, 4, 5.0, 0.40,) * 0.75
         steps.append([round(stepsize * math.cos(direction)), round(stepsize * math.sin(direction))])
     
+    if(absolute):
+        coords = [[0,0]]
+        for i in range(len(steps)):
+            coords.append([coords[i][0]+steps[i][0], coords[i][1]+steps[i][1]])
+        return coords
+
     return steps

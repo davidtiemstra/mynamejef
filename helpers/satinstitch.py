@@ -28,6 +28,10 @@ def satinstitch(input, width=50, density=3):
         segX = segment[1][0] - segment[0][0]
         segY = segment[1][1] - segment[0][1]
 
+        if(segX==0 and segY==0):
+            print('0 length stitch!')
+            continue
+
         segLength = math.sqrt(segX**2 + segY**2)
         angleB = math.asin(segY/segLength)
 

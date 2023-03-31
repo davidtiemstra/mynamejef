@@ -1,6 +1,8 @@
 from helpers import pathviewer
+from helpers import dstgenerator
 from helpers import horizontalfill
 from helpers import satinstitch
+from generators import randomwalker
 import random
 from generators import dnadrawer
 
@@ -9,11 +11,13 @@ if __name__ == "__main__":
     viewer = pathviewer.PathViewer(primary_color='yellow')
     #viewer.primary_color = 'blue'
 
-    path = [[0,0],[10,100],[10,400],[400,20],[0,0]]
+    #running randomwalk + satinstitch experiment
+    path = randomwalker.randomwalker(100, stepsize=25, absolute=True)
+    satin_path = satinstitch.satinstitch(path, density=1)
 
-    fill_path = horizontalfill.horizontal_fill(path, 10)
-    print(fill_path)
+    dstgenerator.export_dst(satin_path,'experiment_output\\satinwalk7')
+
     #viewer.render_path(path, pathviewer.DisplayMode.LINE)
-    viewer.render_path(fill_path, pathviewer.DisplayMode.POINTS)
+    viewer.render_path(satin_path, pathviewer.DisplayMode.LINE)
     viewer.update()
 
