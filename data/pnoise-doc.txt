@@ -1,0 +1,21 @@
+ pnoise3 = noise3(x, y, z, octaves=1, persistence=0.5, lacunarity=2.0repeatx=1024, repeaty=1024, repeatz=1024, base=0.0)
+ return perlin "improved" noise value for specified coordinate
+
+        octaves -- specifies the number of passes for generating fBm noise,
+        defaults to 1 (simple noise).        
+
+        persistence -- specifies the amplitude of each successive octave relative
+        to the one below it. Defaults to 0.5 (each higher octave's amplitude
+        is halved). Note the amplitude of the 
+first pass is always 1.0.
+
+        lacunarity -- specifies the frequency 
+of each successive octave relative
+        to the one below it, similar to persistence. Defaults to 2.0.
+
+        repeatx, repeaty, repeatz -- specifies the interval along each axis when
+        the noise values repeat. This can be used as the tile size for creating
+        tileable textures
+
+        base -- specifies a fixed offset for the input coordinates. Useful for
+        generating different noise textures with the same repeat interval
