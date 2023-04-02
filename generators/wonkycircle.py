@@ -34,8 +34,8 @@ def wonkycircle(radius, amplitude, offset, step_count, wonkiness=13, seed=False,
         noise_value = noise.pnoise1(seed + wonkiness * (i/step_count), repeat=wonkiness)
         this_radius = radius + radius * amplitude * noise_value
 
-        x = math.cos(angle) * this_radius + offset
-        y = math.sin(angle) * this_radius + offset
+        x = round(math.cos(angle) * this_radius + offset)
+        y = round(math.sin(angle) * this_radius + offset)
         
         coords.append([x,y])
 

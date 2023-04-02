@@ -138,3 +138,4 @@ def export_dst(stitches, filename):
     f = open(filename + ".dst", "wb")
     f.write(header + stitchdata)		
     f.close()
+    dbg.write('saved file to ' + filename + '.dst!\n')
