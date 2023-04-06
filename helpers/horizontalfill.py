@@ -55,9 +55,14 @@ def horizontal_fill(path, y_step, x_step):
         intersections_list = []
 
         # Converts shapely intersection to list
-        if intersections.geom_type == 'GeometryCollection' or intersections.geom_type == 'MultiLineString':
-            # If the intersection type is a GeometryCollection or MultiLineString, we have to get the coords from
-            # the sub geometries. Shapely automatically generates the intersection type and sometimes
+        if (
+                intersections.geom_type == 'GeometryCollection' or
+                intersections.geom_type == 'MultiLineString' or
+                intersections.geom_type == 'MultiPoint'
+        ):
+            # If the intersection type is a GeometryCollection, MultiLineString or MultiPoint,
+            # we have to get the coords from the sub geometries.
+            # Shapely automatically generates the intersection type and sometimes
             # (if there are 3 intersection points) it creates a collection with sub geometries instead of just one
             # geometry. If this happens it now iterates over all the geometries first and then over the coords
             # or else it crashes. This seems to be a bug or bad implementation in shapely.
