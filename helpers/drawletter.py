@@ -1,5 +1,6 @@
 import  math
 
+# add a good way to do new lines
 # write a different S function!!
 # do something to make non-uniform scaling not mess up the stitch distance
 
@@ -393,14 +394,21 @@ def drawLetter(letter, width, height, stitchdist):
     
     return steps
 
-def drawString(string, width=30, height=60, spacing=10, stitchdist=8):
+def drawString(string, width=30, height=60, spacing=10, stitchdist=8, beans=0):
     steps = []
     prev = [0,0]
 
     for character in string:
         coords = drawLetter(character, width, height, stitchdist)
         for point in coords:
-            steps.append([round(point[0]) - round(prev[0]), round(point[1]) - round(prev[1])])
+            xshift = round(point[0]) - round(prev[0])
+            yshift = round(point[1]) - round(prev[1])
+
+            steps.append([xshift, yshift])
+            for i in range(beans):
+                steps.append([-xshift, -yshift])
+                steps.append([xshift, yshift])
+
             prev = point
         prev = [prev[0] - width - spacing, prev[1]]
     

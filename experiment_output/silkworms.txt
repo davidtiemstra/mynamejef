@@ -1,0 +1,20 @@
+satinwalk5:
+density=3
+width=50
+stepsize=25
+stitch count=866
+0 issues
+
+satinwalk7:
+density=1
+width=50
+stepsize=25
+stitchcount=2428
+2 thread breaks 
+
+satinwalk6:
+density=6
+width=50
+stepsize=25
+stitchcount=1280
+0 issues

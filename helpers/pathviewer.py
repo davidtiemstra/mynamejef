@@ -29,7 +29,7 @@ class PathViewer:
     # This property contains the canvas inside the window in which the path is drawn
     canvas = tk.Canvas()
 
-    def __init__(self, canvas_size=[800, 800], background_color='black', primary_color='green'):
+    def __init__(self, canvas_size=[600, 600], background_color='black', primary_color='green'):
 
         # Sets properties to values passed in init method (if none are passed defaults are used)
         self.background_color = background_color
@@ -38,7 +38,7 @@ class PathViewer:
 
         # Sets properties of the main window
         self.root.title("Path Viewer")
-        self.root.geometry("900x900")
+        self.root.geometry("700x700")
         self.root.resizable(width=True, height=True)
         self.root.configure(background=self.background_color)
 
