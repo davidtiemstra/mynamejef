@@ -72,15 +72,11 @@ def horizontal_fill(path, y_step, x_step):
                     intersections_list.append(coord)
 
         else:
-            print(intersections.geom_type)
             for coord in intersections.coords:
                 intersections_list.append(coord)
 
         # Random int to shift the stitch points, so they do not all line up vertically.
         x_shift = random.randint(0, 50)
-
-        print('listlist')
-        print(intersections_list)
 
         if direction == 1:
 
