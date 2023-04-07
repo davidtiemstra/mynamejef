@@ -105,17 +105,27 @@ class PathViewer:
         # This method is needed to keep the root window opened
         self.root.mainloop()
 
-    def render_path(self, path, display_mode):
+    def render_path(self, path, display_mode, is_centered = True):
         # Deletes all previous paths to be sure
         self.canvas.delete('all')
+
+        # Centers path if is_centered is true -> sets origin to center of canvas
+        edited_path = []
+        if is_centered:
+            for point in path:
+                x = point[0] + self.canvas_size[0]/2
+                y = point[1] + self.canvas_size[1]/2
+                edited_path.append([x,y])
+        else:
+            edited_path = path
 
         # Determines display mode
         if display_mode == DisplayMode.LINE:
             # If line, create line
-            self.canvas.create_line(path, width=1, fill=self.primary_color)
+            self.canvas.create_line(edited_path, width=1, fill=self.primary_color)
         elif display_mode == DisplayMode.POINTS:
             # If point, create oval at every point
-            for point in path:
+            for point in edited_path:
                 x = point[0]
                 y = point[1]
                 self.canvas.create_oval(x, y, (x + 2), (y + 2), outline=self.primary_color, fill=self.primary_color)
