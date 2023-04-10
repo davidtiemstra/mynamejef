@@ -3,7 +3,7 @@ from enum import Enum
 
 
 #   ==================================================================================================================
-#   WORK IN PROGRESS - DOCUMENTATION AND COMMENTS NOT FINISHED.
+#   WORK IN PROGRESS [UNDER CONSTRUCTION] - DOCUMENTATION AND COMMENTS NOT FINISHED.
 #   ==================================================================================================================
 
 
