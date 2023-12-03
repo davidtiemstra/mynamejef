@@ -19,7 +19,6 @@ dbg = sys.stderr
 # position matrix for converting the terts to bytes:
 posmat = [[3,7,2,6,10], [0,4,1,5,9]]
 
-
 # stitch encoding
 # currently does not account for color changes
 def encodeStitch(stitch, jump):
@@ -53,17 +52,12 @@ def encodeStitch(stitch, jump):
 
     return int(bits,2).to_bytes(3,"big") #bitstring to binary
 
-def findLimits(stitches):
+def findLimits(coordinates):
     # find max distances 
     limits = [0,0,0,0]
 
-    # for relative coordinates, convert to relative coordinates lol
-    abssteps = [[0,0]]
-    for index, i in enumerate(stitches):
-        abssteps.append([abssteps[index][0] + i[0], abssteps[index][1] + i[1]])
-
     # use this with absolute coordinates
-    for i in abssteps:
+    for i in coordinates:
         if(i[0]>limits[0]):
             limits[0] = i[0]
         if(i[0]<limits[1]):
@@ -88,7 +82,12 @@ def padString(inputstring, maxlength):
     return output
 
 
-def export_dst(stitches, filename):
+def export_dst(coordinates, filename):
+
+    # conversion from absolute to relative coordinates
+    stitches = []
+    for index in range( 1, len(coordinates) ):
+        stitches.append([ coordinates[index][0] - coordinates[index-1][0] , coordinates[index][1] - coordinates[index-1][1] ])
 
     stitchdata = b''
     jumpcount = 0
@@ -102,7 +101,7 @@ def export_dst(stitches, filename):
             jumps = math.ceil(max(abs(stitch[0]), abs(stitch[1]))/121)
             jumpcount += jumps
             for i in range(jumps):
-                stitchdata += encodeStitch([int(stitch[0]/(jumps)), int(stitch[1]/(jumps))], True)
+                stitchdata += encodeStitch([math.floor(stitch[0]/(jumps)), math.floor(stitch[1]/(jumps))], True)
             stitchdata += encodeStitch([stitch[0]%jumps, stitch[1]%jumps], False)
 
     # mandatory end triplet
@@ -114,7 +113,7 @@ def export_dst(stitches, filename):
     for i in range(16 - len(filename)):
         label += " "
 
-    limits = findLimits(stitches)
+    limits = findLimits(coordinates)
 
     # writing the header
     header = ("LA:" + label + "\r" + 

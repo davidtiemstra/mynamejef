@@ -1,3 +1,5 @@
+import random
+import math
 from helpers import pathviewer
 from helpers import dstgenerator
 from helpers import horizontalfill
@@ -5,7 +7,6 @@ from helpers import satinstitch
 from helpers import drawletter
 from generators import randomwalker
 from generators import wonkycircle
-import random
 from generators import dnadrawer
 from generators import topographer
 
@@ -13,13 +14,19 @@ from generators import topographer
 
 if __name__ == "__main__":
 
-    viewer = pathviewer.PathViewer(primary_color='yellow')
 
-    # topography experiment (goes crazy)
-    path = topographer.topographer()
-    dstgenerator.export_dst(path, 'experiment_output/topo12')
+    viewer = pathviewer.PathViewer(regen_prompt=False)
 
+    for i in range(50):
+        seed = 1000 * random.random()
+        print('number: ' + str(i) + ', seed: ' + str(seed))
+        path = randomwalker.randomWalkAnt(seed=seed)
+        dstgenerator.export_dst(path, 'experiment_output\\antwalks\\antwalk' + str(i))
 
-    viewer.render_path(path, pathviewer.DisplayMode.LINE)
+    viewer.render_path(path, pathviewer.DisplayMode.LINE, False)
     viewer.update()
+    
+    # test with 15 deg intervals
+    # for i in range(24):
+    #     jefgenerator.export_jef(antdrawer(i * (math.pi / 12), 1.7), 'antscale17r' + str((i) * 15) + '.jef')
 

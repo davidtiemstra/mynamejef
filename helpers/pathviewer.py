@@ -375,8 +375,8 @@ class PathViewer:
 
     def display_grid(self, intervals, scale):
         distance = self.canvas_size[0] / intervals * scale
-        print('distNCE')
-        print(distance)
+        # print('distNCE')
+        # print(distance)
         for x in range(-1000, 1000):
             point_a = [x * distance, -10000]
             point_b = [x * distance, 10000]
@@ -414,7 +414,7 @@ class PathViewer:
         self.canvas.scan_dragto(event.x, event.y, gain=1)
         self.x_pan = event.x - self.x_pan_start
 
-        print(self.x_pan)
+        # print(self.x_pan)
         self.ruler.update_scale(self.current_scale, (self.x_pan + self.x_pos))
 
     def reset_frame(self):
@@ -430,7 +430,7 @@ class PathViewer:
 
     def regen(self):
         if self.regen_command is not None:
-            print('not none')
+            # print('not none')
             self.reset_frame()
             self.regen_command(self.regen_prompt_entry.get())
 
@@ -462,14 +462,14 @@ class PathViewer:
             self.canvas.scale('all', 0,0, self.current_scale, self.current_scale)
 
     def toggle_display_mode(self):
-        print('toggle')
+        # print('toggle')
         if self.current_display_mode == DisplayMode.LINE:
-            print('LINE')
+            # print('LINE')
             self.current_display_mode = DisplayMode.POINTS
             self.render_path(self.current_path, DisplayMode.POINTS, False)
             self.canvas.scale('all', 0, 0, self.current_scale, self.current_scale)
         elif self.current_display_mode == DisplayMode.POINTS:
-            print("POINST")
+            # print("POINST")
             self.current_display_mode = DisplayMode.LINE
             self.render_path(self.current_path, DisplayMode.LINE, False)
             self.canvas.scale('all', 0, 0, self.current_scale, self.current_scale)
