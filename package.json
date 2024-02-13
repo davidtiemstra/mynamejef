@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "paper": "^0.12.17",
+    "simplex-noise": "^4.0.1"
+  }
+}

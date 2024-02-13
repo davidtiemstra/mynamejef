@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     viewer = pathviewer.PathViewer(regen_prompt=False)
 
-    name = 'fg6'
+    name = 'sintree1-5'
 
     path = csvtopath.getPath('data\\p5output\\' + name + '.csv')
 
