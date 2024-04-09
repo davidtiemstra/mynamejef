@@ -86,6 +86,10 @@ function initializePath() {
         paused = !paused;
     };
 
+    orderButton.onMouseDown = function(event){
+        this.firstChild.fillColor = 'white'; this.lastChild.fillColor = 'black';
+        console.log('seed: ' + seed + ' - time: ' + ts)
+    };
 
     ground.segments = [];
     ground.add(
