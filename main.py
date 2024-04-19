@@ -18,21 +18,21 @@ if __name__ == "__main__":
 
     viewer = pathviewer.PathViewer(regen_prompt=False)
 
-    # name = 'crossghost2'
+    name = 'janabi\\pattern3-ss2-sd20-sc3'
 
-    # path = csvtopath.getPath('data\\p5output\\' + name + '.csv')
+    path = csvtopath.getPath('data\\p5output\\' + name + '.csv')
 
-    # dstgenerator.export_dst(path, 'experiment_output\\' + name)
+    dstgenerator.export_dst(path, 'experiment_output\\' + name)
 
     # viewer.render_path(path, pathviewer.DisplayMode.LINE, False)
     # viewer.update()
 
-    for i in range(1,35):
-        # seed = 1000 * random.random()
-        # print('number: ' + str(i) + ', seed: ' + str(seed))
-        # path = randomwalker.randomWalkAnt(seed=seed)
-        path = csvtopath.getPath('data\\cs16\\' + str(i) + '.csv')
-        dstgenerator.export_dst(path, 'experiment_output\\cs16\\' + str(i))
+    # for i in range(1,35):
+    #     # seed = 1000 * random.random()
+    #     # print('number: ' + str(i) + ', seed: ' + str(seed))
+    #     # path = randomwalker.randomWalkAnt(seed=seed)
+    #     path = csvtopath.getPath('data\\cs16\\' + str(i) + '.csv')
+    #     dstgenerator.export_dst(path, 'experiment_output\\cs16\\' + str(i))
 
     
     # test with 15 deg intervals
