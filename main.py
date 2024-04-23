@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     viewer = pathviewer.PathViewer(regen_prompt=False)
 
-    name = 'janabi\\pattern3-ss2-sd20-sc3'
+    name = 'flower patches\\fgr6 sd5 sc3'
 
     path = csvtopath.getPath('data\\p5output\\' + name + '.csv')
 
@@ -27,15 +27,10 @@ if __name__ == "__main__":
     # viewer.render_path(path, pathviewer.DisplayMode.LINE, False)
     # viewer.update()
 
+    # # batch exporting
     # for i in range(1,35):
     #     # seed = 1000 * random.random()
     #     # print('number: ' + str(i) + ', seed: ' + str(seed))
     #     # path = randomwalker.randomWalkAnt(seed=seed)
     #     path = csvtopath.getPath('data\\cs16\\' + str(i) + '.csv')
     #     dstgenerator.export_dst(path, 'experiment_output\\cs16\\' + str(i))
-
-    
-    # test with 15 deg intervals
-    # for i in range(24):
-    #     jefgenerator.export_jef(antdrawer(i * (math.pi / 12), 1.7), 'antscale17r' + str((i) * 15) + '.jef')
-
