@@ -107,4 +107,9 @@ function draw() {
   }
 
 }
-
+function keyPressed(){
+  if (key == 'f'){
+    
+    dst.export_dst(distortedPoints, 'test_test')
+  }
+}
