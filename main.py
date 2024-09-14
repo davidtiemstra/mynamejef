@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     viewer = pathviewer.PathViewer(regen_prompt=False)
 
-    name = 'flower patches\\fgr6 sd5 sc3'
+    name = 'flower patches\\fgr7 sd20 sc4 far0.07'
 
     path = csvtopath.getPath('data\\p5output\\' + name + '.csv')
 
@@ -28,9 +28,9 @@ if __name__ == "__main__":
     # viewer.update()
 
     # # batch exporting
-    # for i in range(1,35):
+    # for i in range(1,12):
     #     # seed = 1000 * random.random()
     #     # print('number: ' + str(i) + ', seed: ' + str(seed))
     #     # path = randomwalker.randomWalkAnt(seed=seed)
-    #     path = csvtopath.getPath('data\\cs16\\' + str(i) + '.csv')
-    #     dstgenerator.export_dst(path, 'experiment_output\\cs16\\' + str(i))
+    #     path = csvtopath.getPath('data\\p5output\\flower patches\\fgr7 sd20 sc4 far0.07 (' + str(i) + ').csv')
+    #     dstgenerator.export_dst(path, 'experiment_output\\flower patches\\fgr7 sd20 sc4 far0.07 (' + str(i) + ')')
