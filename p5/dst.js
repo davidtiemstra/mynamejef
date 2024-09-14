@@ -83,16 +83,16 @@ class dst{
         // use this with absolute coordinates
         for(let i=0; i<coordinates.length; i++){
             if(coordinates[i].x>limits[0]){
-                limits[0] = coordinates[i].x
+                limits[0] = round(coordinates[i].x)
             }
             if(coordinates[i].x<limits[1]){
-                limits[1] = abs(coordinates[i].x)
+                limits[1] = round(abs(coordinates[i].x))
             }
             if(coordinates[i].y>limits[2]){
-                limits[2] = coordinates[i].y
+                limits[2] = round(coordinates[i].y)
             }
             if(coordinates[i].y<limits[3]){
-                limits[3] = abs(coordinates[i].y)
+                limits[3] = round(abs(coordinates[i].y))
             }
         }
 
@@ -115,11 +115,11 @@ class dst{
         return output;
     }
 
-    static export_dst(coordinates, filename){
+    static export(coordinates, filename){
         // conversion from absolute to relative coordinates
         let stitches = [];
         for(let index=1; index < coordinates.length; index++){
-            stitches.push([ coordinates[index].x - coordinates[index-1].x , coordinates[index].y - coordinates[index-1].y ])
+            stitches.push([ round(coordinates[index].x - coordinates[index-1].x) , round(coordinates[index].y - coordinates[index-1].y) ])
         }
 
         let stitchdata = new Uint8Array(0)
