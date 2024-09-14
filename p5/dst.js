@@ -119,7 +119,7 @@ class dst{
         // conversion from absolute to relative coordinates
         let stitches = [];
         for(let index=1; index < coordinates.length; index++){
-            stitches.push([ round(coordinates[index].x - coordinates[index-1].x) , round(coordinates[index].y - coordinates[index-1].y) ])
+            stitches.push([ round(coordinates[index].x - coordinates[index-1].x) , -1* round(coordinates[index].y - coordinates[index-1].y) ])
         }
 
         let stitchdata = new Uint8Array(0)
