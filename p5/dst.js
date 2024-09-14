@@ -118,8 +118,16 @@ class dst{
     static export(coordinates, filename){
         // conversion from absolute to relative coordinates
         let stitches = [];
+
+        for(let i=0; i < coordinates.length; i++){
+            coordinates[i] = createVector(round(coordinates[i].x), round(coordinates[i].y))
+        }
+        
         for(let index=1; index < coordinates.length; index++){
-            stitches.push([ round(coordinates[index].x - coordinates[index-1].x) , -1* round(coordinates[index].y - coordinates[index-1].y) ])
+            stitches.push([ 
+                     coordinates[index].x - coordinates[index-1].x , 
+                -1* (coordinates[index].y - coordinates[index-1].y )
+            ]);
         }
 
         let stitchdata = new Uint8Array(0)
@@ -131,17 +139,16 @@ class dst{
             const stitch = stitches[i];
             
             // check for jump stitch
-            if(max(abs(stitch[0]), abs(stitch[1])) < 122){
+            if(max( abs(stitch[0]), abs(stitch[1]) ) < 122){
                 stitchdata = dst.concatBytes(stitchdata, dst.encodeStitch(stitch, false));
             }
-            
             else{
-            let jumps = ceil(max(abs(stitch[0]), abs(stitch[1]))/121)
-            jumpcount += jumps
-            for(let j=0; j<jumps.length; j++){
-                stitchdata = dst.concatBytes( stitchdata, dst.encodeStitch( [math.floor(stitch[0]/(jumps)), math.floor(stitch[1]/(jumps))], true));
-            }
-            stitchdata = dst.concatBytes(stitchdata, dst.encodeStitch([stitch[0]%jumps, stitch[1]%jumps], false));
+                let jumps = ceil( max(abs(stitch[0]), abs(stitch[1])) / 121)
+                jumpcount += jumps
+                for(let j=0; j<jumps; j++){
+                    stitchdata = dst.concatBytes( stitchdata, dst.encodeStitch( [ floor(stitch[0]/jumps), floor(stitch[1]/jumps) ], true));
+                }
+                stitchdata = dst.concatBytes(stitchdata, dst.encodeStitch( [ stitch[0]%jumps, stitch[1]%jumps ], false));
             }
         }
 
@@ -187,5 +194,6 @@ class dst{
         link.attribute('download', filename + '.dst');
         link.elt.click();
         URL.revokeObjectURL(url);
+        link.remove()
     }
 }
