@@ -101,7 +101,7 @@ function draw() {
         let my = (mouseY-height/2)
         if (dist(p.x,p.y, mx, my)<mouseRadius){
    
-            let weight = random(-0.1,0.1);
+            let weight = random(-0.2,0.2);
 
             let dx = (mx-p.x) * weight
             let dy = (my-p.y) * weight
