@@ -187,5 +187,6 @@ class dst{
         link.attribute('download', filename + '.dst');
         link.elt.click();
         URL.revokeObjectURL(url);
+        link.remove()
     }
 }
