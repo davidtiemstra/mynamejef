@@ -3,11 +3,11 @@
 
 // Selected font and text
 let theFont;
-const theText = 'rat labour'
+let theText = 'r'
 const fontSize = 80
 
 // Determines how many outlines will be generated
-let numberOfLayers = 3;
+let numberOfLayers = 1;
 
 // Contains text points
 let textPoints = []
@@ -28,6 +28,12 @@ let p1Slider;
 let p2Slider;
 let offSlider;
 let layerSlider;
+
+// Text input
+let textField; 
+
+// Button
+let updateTextButton;
 
 // For playing with it with the mouse
 const allowMouseInteraction = true
@@ -53,6 +59,12 @@ function setup() {
   p2Slider = createSlider(1,100,5,1);
   offSlider = createSlider(0,2,0.1,0.01);
   layerSlider = createSlider(1,20,1,1);
+
+  textField = createInput()
+  textField.attribute('placeholder', 'text')
+
+  updateTextButton = createButton('update text')
+  updateTextButton.mousePressed(updateText)
 
 }
 
@@ -97,7 +109,8 @@ function draw() {
             y += dy
         }
       }
-      distortedPoints.push(createVector(x,y))
+      let mult = 7
+      distortedPoints.push(createVector(mult*x,mult*y))
       vertex(x, y)
    
     }
@@ -109,7 +122,19 @@ function draw() {
 }
 function keyPressed(){
   if (key == 'f'){
-    
-    dst.export_dst(distortedPoints, 'test_test')
+    print(textPoints.length)
+    print(distortedPoints.length)
+    print(distortedPoints)
+    dst.export(distortedPoints, 'test_test')
   }
+}
+function updateText(){
+  theText = textField.value()
+  textFont(theFont)
+  textSize(fontSize)
+
+  textPoints = theFont.textToPoints(theText, 0, 0, 80, {
+    sampleFactor: 0.3,  // Increase this value for higher resolution
+    simplifyThreshold: 0  // You can adjust this to smooth out the points
+  });
 }
