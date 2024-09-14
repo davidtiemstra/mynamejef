@@ -3,6 +3,7 @@ from shapely import *
 from shapely.geometry import Point, Polygon, LineString, GeometryCollection
 import random
 
+
 #   ==================================================================================================================
 #   DESCRIPTION:
 #   Takes circumference path and converts it to horizontal fill path.
@@ -46,10 +47,12 @@ def horizontal_fill(path, y_step, x_step):
     # Holds direction value. 1 = Right, -1 = Left
     direction = 1
 
+    count = 0
+    # y_levels.pop()
     for level in y_levels:
 
-        # Calculates the points on the circumference at the current y level by checking the intersections between
-        # the circumference/shape and a line at the current y level from min_x to max_x.
+        # Calculates the points on the edge at the current y level by checking the intersections between
+        # the edge/shape and a line at the current y level from min_x to max_x.
         line = LineString([(extremes[0], level), (extremes[2], level)])
         intersections = shape.intersection(line)
         intersections_list = []
@@ -78,10 +81,21 @@ def horizontal_fill(path, y_step, x_step):
         # Random int to shift the stitch points, so they do not all line up vertically.
         x_shift = random.randint(0, 50)
 
+        a = intersections_list[0]
+        b = intersections_list[len(intersections_list) - 1]
+        left = []
+        right = []
+        if a[0] > b[0]:
+            left = b
+            right = a
+        else:
+            left = a
+            right = b
+
         if direction == 1:
 
             # Adds the first intersection as the first point in the line
-            fill_path.append(intersections_list[0])
+            fill_path.append(left)
 
             # For every x between the min_x and max_x
             for x in range(extremes[0], extremes[2]):
@@ -99,28 +113,37 @@ def horizontal_fill(path, y_step, x_step):
             direction = -1
 
             # Also add the last intersection to the fill path
-            fill_path.append(intersections_list[len(intersections_list) - 1])
+            fill_path.append(right)
         else:
             # This does the same as for the other direction, but the points are first added to temp_list,
             # then temp_list is reversed and added to the array, to match the direction.
-            fill_path.append(intersections_list[len(intersections_list) - 1])
+
+
+            fill_path.append(right)
+
             temp_list = []
             for x in range(extremes[0], extremes[2]):
                 if x % x_step == 0:
-                    point = Point(x + x_shift, level)
-                    if shape.contains(point):
-                        temp_list.append([(x + x_shift), level])
+                    new_x = x + x_shift
+                    print('pie')
+                    print(new_x)
+                    if new_x > extremes[0] and new_x < extremes[2]:
+                        print('poe')
+                        temp_list.append([new_x, level])
             direction = 1
             temp_list.reverse()
+
             fill_path.extend(temp_list)
-            fill_path.append(intersections_list[0])
+
+            fill_path.append(left)
+
+        count += 1
 
     return fill_path
 
 
 # This function calculates the extremes for a path
 def calculate_extremes(path):
-
     min_x = None
     max_x = None
     min_y = None
