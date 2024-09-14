@@ -166,7 +166,7 @@ class dst{
                     "-X:"  + dst.padString(str(limits[1]), 5) + "\r"+
                     "+Y:"  + dst.padString(str(limits[2]), 5) + "\r"+
                     "-Y:"  + dst.padString(str(limits[3]), 5) + "\r" +
-                    "AX:+    0\rAY{+    0\rMX{+    0\rMY{+    0\r" + 
+                    "AX:+    0\rAY:+    0\rMX:+    0\rMY:+    0\r" + 
                     "PD:******\r" );
 
         header = Uint8Array.from(header, (v)=> v.charCodeAt(0) );
