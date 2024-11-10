@@ -196,4 +196,205 @@ class dst{
         URL.revokeObjectURL(url);
         link.remove()
     }
+
+    static parseSVG(strings, returnsegments=false, trimoob = false, beziersteps=10, scaletofit=null){
+        //to do:
+        // - some weird shit going on rn where it adds out of bounds coords?
+
+        let segments = [];
+
+        const lines =    true;
+        const polygons = true;
+        const rects =    true;
+        const circles =  true;
+        const paths =    true;
+      
+
+        let string = strings.join();
+        const svgwidth =  float(string.match(/width=".*?"/)[0].match( /[0-9]|\./g).join(""));
+        const svgheight = float(string.match(/height=".*?"/)[0].match(/[0-9]|\./g).join(""));
+      
+        for(let i=0; i<string.length-1; i++ ){
+
+            function appendArray(floatarray){
+                let segment = [];
+                for(let i=0; i<floatarray.length; i+=2){
+                    segment.push(createVector(floatarray[i],floatarray[i+1]));
+                }
+                segments.push(segment);
+            }
+
+            let object;
+            let objindex;
+
+            try{
+                object = string.slice(i).match(/<.*?>/)
+                objindex = object.index;
+                object = object[0];
+            }
+            catch{
+                break;
+            }
+            i += objindex + object.length-1;
+
+            if(object.match(/<line.*?>/) && lines){
+                appendArray( object.match(/"([0-9]|\.)*?"/g).map(s => float(s.slice(1,s.length-1))));
+            }
+            if(object.match(/<poly.*?>/) && polygons){
+                const pointstring = object.match(/points=".*?"/)[0];
+                const array = pointstring.match(/(-|[0-9]|\.){1,}/g).map(s => float(s));
+                if(object.match(/<polygon/)){
+                    array.push(array[0],array[1])
+                }
+                appendArray(array);
+            }
+            if(object.match(/<rect.*?>/) && rects){
+                let recttranslate = createVector(0,0);
+                let rectrotate = 0;
+                try{
+                    recttranslate = createVector(...(object.match(/translate\(.*?\)/)[0].match(/(-|[0-9]|\.){1,}/).map(s => float(s))));
+                    rectrotate = float(object.match(/rotate\(.*?\)/)[0].match(/(-|[0-9]|\.){1,}/)[0]);
+                }catch{}
+                let rectcoord = createVector(0,0);
+                try{rectcoord = createVector(float(object.match(/x=".*?"/).map(s=>s.slice(3,s.length-1))[0]), float(object.match(/y=".*?"/).map(s=>s.slice(3,s.length-1))[0])).rotate(rectrotate).add(recttranslate);}
+                catch{}
+                const rectsize = createVector(float(object.match(/width=".*?"/).map(s=>s.slice(8,s.length-1))[0]), float(object.match(/height=".*?"/).map(s=>s.slice(9,s.length-1))[0])).rotate(rectrotate).add(recttranslate);
+                segments.push([rectcoord, 
+                    createVector(rectcoord.x+rectsize.x, rectcoord.y),
+                    createVector(rectcoord.x+rectsize.x, rectcoord.y+rectsize.y),
+                    createVector(rectcoord.x+rectsize.x, rectcoord.y+rectsize.y)
+                ]);
+
+            }
+            if(object.match(/<circle.*?>/) && circles){
+                const nums = object.match(/(([x|y])|r)=".*?"/g).map(s=>float(s.slice(3,s.length-1)));
+                const c = createVector(nums[0], nums[1])
+                const r = nums[2];
+                let segment = [];
+                for(let j=0;j<beziersteps*2;j++){
+                    const alph = (j/(beziersteps*2))*2*PI;
+                    segment.push(createVector(c.x+r*cos(alph), c.y+r*sin(alph)));
+                }
+                segments.push(segment);
+
+            }
+            if(object.match(/<path.*?>/) && paths){
+                object = object.match(/d=".*?"/)[0].slice(3)
+                doPath(object);
+            }
+      
+            function doPath(pathstring){
+                let cursor = createVector(0,0);
+                let pathstart = null;
+
+                let segment = [];
+
+                for(let i=0; i<pathstring.length; i++){
+                    
+                    const chunk = pathstring.slice(i).match(/[m|M|l|L|h|H|v|V|c|C|q|Q|s|S|z|Z][^[m|M|l|L|h|H|v|V|c|C|q|Q|s|S|z|Z]*/)[0];
+                    
+                    i+=chunk.length-1;
+                    
+                    if(chunk.match(/[z|Z]/)){ //close path
+                        segment.push(pathstart);
+                        break;
+                    }
+
+                    const nums = chunk.match(/(-*[0-9]{1,}\.*[0-9]*)|(-*\.*[0-9]{1,})/g).map(s=>float(s))
+                    const relative = chunk[0].toLowerCase() == chunk[0];
+                    if(chunk.match(/[m|M]/)){
+                        if(nums.length!=2){print("move", chunk, nums)}
+                        cursor = createVector(relative*cursor.x+nums[0], relative*cursor.y+nums[1]);
+                        
+                        if(segment.length>0){
+                            segments.push(segment)
+                            segment = [];
+                            segment.push(cursor)
+                        }
+                        if(!pathstart){pathstart=cursor}
+                    }
+                    if(chunk.match(/[l|L]/)){
+                        if(nums.length%2!=0){print("line", chunk, nums)}
+                        for(let j=0; j<nums.length-2;j+=2){
+                            segment.push(createVector(cursor.x,cursor.y),
+                                createVector(relative*cursor.x+nums[j], relative*cursor.y+nums[j+1]));
+                        }
+                        cursor = createVector(relative*cursor.x+nums[nums.length-2], relative*cursor.y+nums[nums.length-1]);
+                        if(!pathstart){pathstart=cursor}
+                    }
+                    if(chunk.match(/[h|H]/)){
+                        if(nums.length!=1){print("hor", chunk, nums)}
+                        cursor = createVector(relative*cursor.x+nums[0],cursor.y);
+                    }
+                    if(chunk.match(/[v|V]/)){
+                        if(nums.length!=1){print("vert", chunk, nums)}
+                        cursor = createVector(cursor.x,relative*cursor.y+nums[0]);
+                    }
+                    if(chunk.match(/[c|C]/)){
+                        let weird = false;
+                        if(nums.length%6!=0){print("curve", nums.length,chunk, nums, pathstring)}
+                        for(let j=0; j<nums.length; j+=6){
+                            for(let s=0;s<beziersteps;s++){
+                                segment.push(dst.pointOnBezier(s/beziersteps, 
+                                    relative*cursor.x,           relative*cursor.y,
+                                    relative*cursor.x+nums[j+0], relative*cursor.y+nums[j+1],
+                                    relative*cursor.x+nums[j+2], relative*cursor.y+nums[j+3],
+                                    relative*cursor.x+nums[j+4], relative*cursor.y+nums[j+5],
+                                ));
+                                
+                                // fill("red")
+                                // circle(segment[segment.length-1].x*1.1,segment[segment.length-1].y*1.1,5)
+                            }
+                            cursor = createVector(relative*cursor.x+nums[j+4],relative*cursor.y+nums[j+5]);
+                        }
+                    }
+                    if(chunk.match(/[q|Q|s|S]/)){
+                        // not really implemented
+                        if(nums.length%4!=0){print("quad", chunk, nums)}
+                        for(let j=0; j<nums.length-2;j+=2){
+                            segment.push(createVector(relative*cursor.x+nums[j],relative*cursor.y+nums[j+1]));
+                        }
+                        cursor = createVector(relative*cursor.x+nums[nums.length-2],relative*cursor.y+nums[nums.length-1]);
+                    }
+
+                    segment.push(cursor);
+
+            
+                    
+                }
+
+                cursor = createVector(0,0);
+                pathstart = null;
+                segments.push(segment);
+                
+            }
+        }
+
+
+        if(trimoob){
+            segments= segments.map(coords => coords.filter(c=>c.x>0&&c.x<svgwidth&&c.y>0&&c.y<svgheight));
+        }
+        if(scaletofit){
+            const ratio = min(scaletofit.x/svgwidth, scaletofit.y/svgheight);
+            segments = segments.map(coords => coords.map(c=>p5.Vector.mult(c,ratio)));
+        }
+
+        segments = segments.filter(s=>s.length>0);
+
+        if(returnsegments){return segments}
+        else{
+            let coords = [];
+            for(let segment of segments){
+                coords = coords.concat(segment)
+            }
+            return coords
+        }
+    }
+
+  static pointOnBezier(t, x0, y0, x1, y1, x2, y2, x3, y3){
+    return createVector(
+      (1-t)**3 * x0 + 3*(1-t)**2 * t * x1 + 3*(1-t)*t**2 * x2 + t**3 * x3,
+      (1-t)**3 * y0 + 3*(1-t)**2 * t * y1 + 3*(1-t)*t**2 * y2 + t**3 * y3
+    );
+  }
 }
