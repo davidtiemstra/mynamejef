@@ -2,8 +2,7 @@ let strings;
 let scalework = 1;
 let viewscale = 0.7;
 let holeradius = 100;
-const holelerp = 1.5;
-const unravelspeed = 0; //set to infinity to unravel on setup, 0 to never unravel
+const holelerp = 0.8;
 const exportdst = false;
 const margin = 20;
 const mindist  = 5;
@@ -16,9 +15,9 @@ let boundingbox = {
 };
 
 let toilet;
-let coords = [], oldcoords = [], unraveledcoords = [], holecoords = [];
+let coords = [], holecoords = [], outlinecoords = [], holeoutlinecoords = [];
 let segments =[];
-let lerpoldcoords;
+let lerpedcoords;
 let justclicked = false;
 
 function preload() {
@@ -33,59 +32,33 @@ function setup() {
 
   holeradius = 100 + random()*100;
 
-  segments = dst.parseSVG(strings, returnsegments=true,trimoob=false,beziersteps=5, scaletofit=createVector(width/viewscale,height/viewscale));
+  segments = dst.parseSVG(strings, returnsegments=true,trimoob=false,beziersteps=5, scaletofit=createVector(width/viewscale-margin*4,height/viewscale-margin*4));
 
   oldsegments = segments.slice();
   coords = [segments[0][0]];
-  lerpoldcoords = [coords[0]];
+  lerpedcoords = [coords[0]];
   flattensegments(true);
 
-  let scaledcoords = [createVector(coords[0].x, coords[0].y)];
+  //hacking my own old logic here. this is an ugly thing.
+  // from this point on im discarding the unlerped coords
+  coords = lerpedcoords;
+
+  let nodoublecoords = [createVector(coords[0].x, coords[0].y)];
   for(let i=1;i<coords.length;i++){
-    const coord = createVector(coords[i].x, coords[i].y)
-    if(coord.dist(scaledcoords[scaledcoords.length-1]) > mindist){
-      scaledcoords.push(coord);
+    const coord = createVector(coords[i].x + margin*2, coords[i].y + margin*2)
+    if(coord.dist(nodoublecoords[nodoublecoords.length-1]) > mindist){
+      nodoublecoords.push(coord);
     }
   }
 
-  boundingbox.l = min(scaledcoords.map(c=>c.x)) - margin;
-  boundingbox.t = min(scaledcoords.map(c=>c.y)) - margin;
-  boundingbox.r = max(scaledcoords.map(c=>c.x)) + margin;
-  boundingbox.b = max(scaledcoords.map(c=>c.y)) + margin;
+  boundingbox.l = min(nodoublecoords.map(c=>c.x)) - margin;
+  boundingbox.t = min(nodoublecoords.map(c=>c.y)) - margin;
+  boundingbox.r = max(nodoublecoords.map(c=>c.x)) + margin;
+  boundingbox.b = max(nodoublecoords.map(c=>c.y)) + margin;
   
-
-  coords = scaledcoords;
-
-  oldcoords = coords.slice();
-  unraveledcoords = [coords[0]];
+  coords = nodoublecoords;
   
-  if(exportdst){
-    let exportnormal = [lerpoldcoords[0]];
-    for(let coord of lerpoldcoords){
-      if(exportnormal[exportnormal.length-1].dist(coord)>mindist){
-        exportnormal.push(coord);
-      }
-    }
-    dst.export(exportnormal,"bagni-ravelled"+toilet)
-  }
-
-  unravel();
-
-  coords = unraveledcoords;
-  
-  if(exportdst){
-    let lerpcoords = [unraveledcoords[0]];
-    for(let i=1;i<unraveledcoords.length;i++){
-      const v0 = lerpcoords[lerpcoords.length-1];
-      const v1 = unraveledcoords[i];
-      for(let j=1;j<v0.dist(v1)/stitchdist;j++){
-        lerpcoords.push(p5.Vector.lerp(v0,v1,j/(v0.dist(v1)/stitchdist)));
-      }
-      lerpcoords.push(v1);
-    }
-
-    dst.export(lerpcoords,"bagni-unravelled-lerp"+toilet)
-  }
+  setoutline();
 
 }
 
@@ -93,22 +66,17 @@ function draw(){
   background(255);
   noFill();
 
-  // rect(5,5,1000*viewscale,1000*viewscale);
-  // rect(
-  //   (boundingbox.l)*viewscale,
-  //   (boundingbox.t)*viewscale,
-  //   (boundingbox.r-boundingbox.l)*viewscale,
-  //   (boundingbox.b-boundingbox.t)*viewscale
-  // );
-
-  unravel();
   holeblastr3000();
   
   beginShape();
 
-  for(let i=0; i<holecoords.length; i++ ){
-    vertex(holecoords[i].x * viewscale, 
-           holecoords[i].y * viewscale)
+  for(let coord of holecoords){
+    vertex(coord.x * viewscale, 
+           coord.y * viewscale)
+  }
+  for(let coord of satinstitchoutline(holeoutlinecoords)){
+    vertex(coord.x * viewscale, 
+           coord.y * viewscale)
   }
 
   endShape();
@@ -167,50 +135,101 @@ function flattensegments(sort){
     function lerpPoints(p0,p1){
       const jumpdist = p0.dist(p1)
       for(let p=0;p<jumpdist;p+=stitchdist){
-        lerpoldcoords.push(p5.Vector.lerp(p0,p1,p/jumpdist))
+        lerpedcoords.push(p5.Vector.lerp(p0,p1,p/jumpdist))
       }
-      lerpoldcoords.push(p1);
+      lerpedcoords.push(p1);
     }
   }
+}
+
+function setoutline(){
+  const corners = [ createVector(boundingbox.l,boundingbox.t),
+              createVector(boundingbox.r,boundingbox.t),
+              createVector(boundingbox.r,boundingbox.b),
+              createVector(boundingbox.l,boundingbox.b),
+              createVector(boundingbox.l,boundingbox.t)];
+  for(let i=0;i<4;i++){
+    outlinecoords.push(corners[i])
+    const edge = p5.Vector.sub(corners[i+1],corners[i]);
+    for(let j=0;j<edge.mag();j+=stitchdist){
+      outlinecoords.push(p5.Vector.lerp(corners[i],corners[i+1],j/edge.mag()));
+    }
+  }
+}
+
+function satinstitchoutline(inputcoords){
+  const satindist = 3;
+  const satinwidth = 15;
+  const satincoords = [];
+  for(let i=0;i<inputcoords.length;i++){
+    const p0 = inputcoords[i], p1 = inputcoords[(i+1)%inputcoords.length];
+    const edge = p5.Vector.sub(p1,p0);
+    const edgeup = p5.Vector.rotate(edge,0.5*PI).setMag(satinwidth*0.5);
+    const edgedown = p5.Vector.rotate(edge,-0.5*PI).setMag(satinwidth*0.5);
+    // holecoords.push(p0)
+    for(let j=0;j<edge.mag();j+=satindist){
+      const p = p5.Vector.lerp(p0,p1,j/edge.mag());
+      satincoords.push(p5.Vector.add(p,edgeup))
+      satincoords.push(p5.Vector.add(p,edgedown))
+    }
+  }
+  return satincoords;
 }
 
 function holeblastr3000(){
   //takes unraveledcoords(?) and blasts a hole in it and stores this as holecoords.
   if(justclicked){
-    lerpoldcoords = holecoords.slice();
+    coords = holecoords.slice();
+    outlinecoords = holeoutlinecoords.slice();
     justclicked = false;
     holeradius = 100+random()*100;
   }
-  holecoords = [];
   const mouse = createVector(mouseX/viewscale,mouseY/viewscale);
-  for(let i=0; i<lerpoldcoords.length;i++){
-    let tomouse = p5.Vector.sub( lerpoldcoords[i],mouse);
+
+  holecoords = [];
+  for(let i=0; i<coords.length;i++){
+    let tomouse = p5.Vector.sub(coords[i],mouse);
     const mousedist = tomouse.mag();
     if(mousedist < holeradius){
       tomouse.setMag(mousedist + (holeradius-mousedist)*holelerp);
       holecoords.push(tomouse.add(mouse));
       continue;
     }
-    holecoords.push(lerpoldcoords[i])
+    holecoords.push(coords[i])
+  }
+
+  holeoutlinecoords = [];
+  for(let i=0; i<outlinecoords.length;i++){
+    let tomouse = p5.Vector.sub(outlinecoords[i],mouse);
+    const mousedist = tomouse.mag();
+    if(mousedist < holeradius){
+      tomouse.setMag(mousedist + (holeradius-mousedist)*holelerp);
+      holeoutlinecoords.push(tomouse.add(mouse));
+      continue;
+    }
+    holeoutlinecoords.push(outlinecoords[i])
   }
 }
 
 function mouseClicked(){
-  justclicked = true;
+  if(key !== 'e'){
+    justclicked = true;
+  }
 }
 
-function unravel(){
-  for(let i=0;i<unravelspeed && oldcoords.length>1;i++){
-    let closest = Infinity;
-    let closestIndex = null;
-    for(let j=0;j<oldcoords.length;j++){
-      const distancetopoint = unraveledcoords[unraveledcoords.length-1].dist(oldcoords[j]);
-      if(distancetopoint < closest){
-        closestIndex = j;
-        closest = distancetopoint;
+function keyPressed(){
+  if(key === 'e'){
+    let exportnormal = [coords[0]];
+    for(let coord of coords){
+      if(exportnormal[exportnormal.length-1].dist(coord)>mindist){
+        exportnormal.push(coord);
       }
     }
-    unraveledcoords.push(oldcoords[closestIndex]);
-    oldcoords.splice(closestIndex,1);
+    for(let coord of satinstitchoutline(outlinecoords)){
+      if(exportnormal[exportnormal.length-1].dist(coord)>mindist){
+        exportnormal.push(coord);
+      }
+    }
+    dst.export(exportnormal,"bagni-holeblasted"+toilet)
   }
 }
