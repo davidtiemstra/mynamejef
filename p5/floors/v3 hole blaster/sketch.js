@@ -2,7 +2,8 @@ let strings;
 let scalework = 1;
 let viewscale = 0.7;
 let holeradius = 100;
-const holelerp = 0.8;
+const holelerp = 0.75;
+const holenoise = 2;
 const exportdst = false;
 const margin = 20;
 const mindist  = 5;
@@ -82,7 +83,7 @@ function draw(){
   endShape();
 
   fill(0)
-  text(toilet, width-30,height-30)
+  text('press e for export. map number: '+toilet, width-200,height-10)
 }
 
 function flattensegments(sort){
@@ -191,7 +192,7 @@ function holeblastr3000(){
     let tomouse = p5.Vector.sub(coords[i],mouse);
     const mousedist = tomouse.mag();
     if(mousedist < holeradius){
-      tomouse.setMag(mousedist + (holeradius-mousedist)*holelerp);
+      tomouse.setMag(mousedist + (holeradius-mousedist)*holelerp*(1.0-holenoise/2+holenoise*noise(10*tomouse.heading(),mouse.x*0.001,mouse.y*0.001)));
       holecoords.push(tomouse.add(mouse));
       continue;
     }
@@ -203,7 +204,7 @@ function holeblastr3000(){
     let tomouse = p5.Vector.sub(outlinecoords[i],mouse);
     const mousedist = tomouse.mag();
     if(mousedist < holeradius){
-      tomouse.setMag(mousedist + (holeradius-mousedist)*holelerp);
+      tomouse.setMag(mousedist + (holeradius-mousedist)*holelerp*(1.0-holenoise/2+holenoise*noise(10*tomouse.heading(),mouse.x*0.001,mouse.y*0.001)));
       holeoutlinecoords.push(tomouse.add(mouse));
       continue;
     }
