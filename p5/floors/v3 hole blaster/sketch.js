@@ -5,7 +5,7 @@ let holeradius = 100;
 const holelerp = 0.75;
 const holenoise = 2;
 const exportdst = false;
-const margin = 20;
+const margin = 80;
 const mindist  = 5;
 const stitchdist = 20;
 let boundingbox = {
@@ -31,9 +31,11 @@ function preload() {
 function setup() {
   createCanvas(710,710);
 
+  // viewscale = width/1400;
+
   holeradius = 100 + random()*100;
 
-  segments = dst.parseSVG(strings, returnsegments=true,trimoob=false,beziersteps=5, scaletofit=createVector(width/viewscale-margin*4,height/viewscale-margin*4));
+  segments = dst.parseSVG(strings, returnsegments=true,trimoob=true,beziersteps=5, scaletofit=createVector(width/viewscale-margin*4,height/viewscale-margin*4));
 
   oldsegments = segments.slice();
   coords = [segments[0][0]];
@@ -52,10 +54,20 @@ function setup() {
     }
   }
 
-  boundingbox.l = min(nodoublecoords.map(c=>c.x)) - margin;
-  boundingbox.t = min(nodoublecoords.map(c=>c.y)) - margin;
-  boundingbox.r = max(nodoublecoords.map(c=>c.x)) + margin;
-  boundingbox.b = max(nodoublecoords.map(c=>c.y)) + margin;
+  const toolong = 100;
+  for(let i=nodoublecoords.length-1;i>=0;i--){
+    const thiscoord = nodoublecoords[i];
+    const prevcoord = nodoublecoords[i-1] ?? createVector(Infinity, Infinity);
+    const nextcoord = nodoublecoords[i+1] ?? createVector(Infinity, Infinity);
+    if(thiscoord.dist(prevcoord) > toolong && thiscoord.dist(nextcoord) > toolong){
+      nodoublecoords.splice(i,1)
+    }
+  }
+
+  boundingbox.l = min(nodoublecoords.map(c=>c.x)) - margin*0.25;
+  boundingbox.t = min(nodoublecoords.map(c=>c.y)) - margin*0.25;
+  boundingbox.r = max(nodoublecoords.map(c=>c.x)) + margin*0.25;
+  boundingbox.b = max(nodoublecoords.map(c=>c.y)) + margin*0.25;
   
   coords = nodoublecoords;
   
@@ -83,7 +95,8 @@ function draw(){
   endShape();
 
   fill(0)
-  text('press e for export. map number: '+toilet, width-200,height-10)
+  textAlign(RIGHT)
+  text('press e for export. press b for new bathroom. bathroom number: '+toilet, width-20,20)
 }
 
 function flattensegments(sort){
@@ -219,7 +232,7 @@ function mouseClicked(){
 }
 
 function keyPressed(){
-  if(key === 'e'){
+  if(key === 'e' || key === 'E'){
     let exportnormal = [coords[0]];
     for(let coord of coords){
       if(exportnormal[exportnormal.length-1].dist(coord)>mindist){
@@ -232,5 +245,8 @@ function keyPressed(){
       }
     }
     dst.export(exportnormal,"bagni-holeblasted"+toilet)
+  }
+  if(key === 'b' || key === 'B'){
+    window.location.reload();
   }
 }
