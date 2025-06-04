@@ -107,8 +107,50 @@ function draw() {
     rescale = true;
   }
 
+  // if(keyIsDown(90)){ // Z
+  //   coords.pop();
+  //   redraw_stitches = true;
+  // }
 
   // ------ DRAWING STUFF ---------
+  
+  // ui gets redrawn every frame
+  noStroke();
+  fill(ui_bg_color);
+  rect(0,0,toolwindow_size,height);
+  // configurable settings:
+  // -stitch distance
+  // -fabric and thread colors
+  // -stitch tool (running, satin, etc)
+  fill(0);
+  noStroke();
+  let lineHeight = 4
+  text(`Stitch distance: ${stitch_dist}`, 10, lineHeight += line_spacing)
+  text(`Stitch count: ${coords.length}`, 10, lineHeight += line_spacing)
+  text(`View scale: ${view_scale}`, 10, lineHeight += line_spacing)
+  text(`View offset: ${ceil(view_offset.x)}, ${ceil(view_offset.y)}`, 10, lineHeight += line_spacing)
+  text('Fabric color:', 10, lineHeight += line_spacing)
+  stroke(0)
+  fill(fabric_color)
+  rect(toolwindow_size-100, lineHeight-8, 10, 10)
+  noStroke()
+  fill(0)
+  text('Thread color:', 10, lineHeight += line_spacing)
+  stroke(0)
+  fill(thread_color)
+  rect(toolwindow_size-100, lineHeight-8, 10, 10)
+  noStroke()
+  fill(0)
+
+  lineHeight += 32;
+
+  text('LMB to draw stitches', 10, lineHeight += line_spacing)
+  text('Drag mouse to create running stitch', 10, lineHeight += line_spacing)
+  text('SHIFT + scroll to set stitch distance', 10, lineHeight += line_spacing)
+  text('Scroll to zoom', 10, lineHeight += line_spacing)
+  text('WASD or arrow keys to pan', 10, lineHeight += line_spacing)
+  text('E to exprt as .dst', 10, lineHeight += line_spacing)
+  text('Z to remove last stitch', 10, lineHeight += line_spacing)
   
   // coord markers get redrawn when moving or scaling
   if(rescale){
@@ -156,43 +198,6 @@ function draw() {
     rescale = false;
     redraw_stitches = true; //this is just in case i missed it somewhere lol
   }
-  
-  // ui gets redrawn every frame
-  noStroke();
-  fill(ui_bg_color);
-  rect(0,0,toolwindow_size,height);
-  // configurable settings:
-  // -stitch distance
-  // -fabric and thread colors
-  // -stitch tool (running, satin, etc)
-  fill(0);
-  noStroke();
-  let lineHeight = 4
-  text(`Stitch distance: ${stitch_dist}`, 10, lineHeight += line_spacing)
-  text(`Stitch count: ${coords.length}`, 10, lineHeight += line_spacing)
-  text(`View scale: ${view_scale}`, 10, lineHeight += line_spacing)
-  text(`View offset: ${ceil(view_offset.x)}, ${ceil(view_offset.y)}`, 10, lineHeight += line_spacing)
-  text('Fabric color:', 10, lineHeight += line_spacing)
-  stroke(0)
-  fill(fabric_color)
-  rect(toolwindow_size-100, lineHeight-8, 10, 10)
-  noStroke()
-  fill(0)
-  text('Thread color:', 10, lineHeight += line_spacing)
-  stroke(0)
-  fill(thread_color)
-  rect(toolwindow_size-100, lineHeight-8, 10, 10)
-  noStroke()
-  fill(0)
-
-  lineHeight += 32;
-
-  text('LMB to draw stitches', 10, lineHeight += line_spacing)
-  text('Drag mouse to create running stitch', 10, lineHeight += line_spacing)
-  text('SHIFT + scroll to set stitch distance', 10, lineHeight += line_spacing)
-  text('Scroll to zoom', 10, lineHeight += line_spacing)
-  text('WASD or arrow keys to pan', 10, lineHeight += line_spacing)
-  text('E to exprt as .dst', 10, lineHeight += line_spacing)
 
 
   
@@ -205,6 +210,21 @@ function draw() {
     fill(fabric_color)
     stroke(0)
     rect(toolwindow_size + scale_markers_width, scale_markers_width, display_hoop.l.w, display_hoop.l.h);
+
+    //redraw on screen lines
+    stroke(200);
+    for(let x = 0; x <= HOOP.l.w; x += scale_markers_spacing ){
+      const realX = transformStitchToScreenSpace(createVector(x, view_offset.y + 1))?.x; //refactor if this gives a performance hit when zooming
+      if(realX){
+        line(realX, height - scale_markers_width, realX, scale_markers_width)
+      }
+    }
+    for(let y = 0; y <= HOOP.l.h; y += scale_markers_spacing ){
+      const realY = transformStitchToScreenSpace(createVector(view_offset.x+1, y))?.y; //refactor if this gives a performance hit when zooming
+      if(realY){
+        line(toolwindow_size + scale_markers_width, realY, width - scale_markers_width, realY)
+      }
+    }
 
     noFill()
     stroke(100)
@@ -280,6 +300,10 @@ function mouseWheel(event) {
 function keyPressed(){
   if(key === 'e' || key === 'E'){
     dst.export(coords,"sketch")
+  }
+  if(key === 'z' || key === 'Z'){
+    coords.pop();
+    redraw_stitches = true;
   }
 }
 
