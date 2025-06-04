@@ -5,8 +5,9 @@ ideally the tools will be in separate scripts in the helpers folder and integrat
 also gonna host this online.
 
 features to add:
-- display stitches that are slightly offscreen
 - undo
+- display stitches that are slightly offscreen
+- interpolate between stitches when moving the mouse rly fast
 - satin stitch tool
 - paint bucket fills?
 
