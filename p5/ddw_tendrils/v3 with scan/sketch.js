@@ -5,40 +5,48 @@ todo/versions:
   [x] get it running for 2 random points.
   [x] let them just continue in a straight spike afterwards
   [x] test & tweak -> thickness
-[ ] high priority fixes
+[x] high priority fixes
   [ ] the fucking dst export misalignment (its not failing now so like fucking whatever?)
-  [ ] make the tendrils avoid eachother/text -> or just die if they cant go anywhere
-  [ ] also the tendrils pointing inward idk what to do about them. improve point in polygon check?
-  [ ] if the individual tendrils are good but the convergers are fucking up the text, make those not converge and just die
-[ ] do the same thing but with text points
-  [ ] try embroidering different fonts
-  [ ] test & tweak -> font choice, vertex interpolation (if necessary)
-[ ] implement scanning
-  [ ] from this phase on i dont think i need to do a lot of test runs
-[ ] implement divergence
+  [x] make the tendrils avoid eachother/text -> or just die if they cant go anywhere
+  [x] also the tendrils pointing inward idk what to do about them. improve point in polygon check?
+  [x] if the individual tendrils are good but the convergers are fucking up the text, make those not converge and just die
+[x] do the same thing but with text points
+  [x] try embroidering different fonts
+  [x] test & tweak -> font choice, vertex interpolation (if necessary)
+[x] implement scanning
+  [x] from this phase on i dont think i need to do a lot of test runs
+[x] implement divergence
+[ ] make it slightly interactive (placing the text)
+[ ] do hella parameter tweaks
 [ ] implement flowers
 */
 
 const STEP_SIZE = 4; //in DU
 const START_THICKNESS = 18;
 const MAX_CONVERGE_DISTANCE = 75;
+const NUTRIENT_BORDER = 50; // make nutrients falloff near border
 const MINIMUM_THICKNESS = 4; // i can maybe lower this if we play with the tension to get less bobbin pullthrough at the tips
 const THICKNESS_FALLOFF = 0.4; //only for debugging
 const DISPLAY_RATIO = 2;
 // const DISPLAY_RATIO = 0.55; // real value for laptop screen
 
-// these gonna need some tweaking
+// i can tweak these mostly to trade performance for scan resolution
 const SCAN_ANGULAR_RESOLUTION = 0.08;
 const SCAN_RADIAL_RESOLUTION = STEP_SIZE;
-const SCAN_DISTANCE = SCAN_RADIAL_RESOLUTION * 5;
-const INTERSECTION_PENALTY = 0.4;
-const THICKNESS_MODIFIER = 0.2;
+const SCAN_DISTANCE = SCAN_RADIAL_RESOLUTION * 3;
 
-const MINIMUM_NUTRIENTS = 1 // if theres nothing above this try to converge
+// tweak these to determine growth behaviour
+const INTERSECTION_PENALTY = 2.0;
+const SUSTENANCE_LEVEL = 0.4; // amount of nutrients a tendril needs to break even
+const THICKNESS_MODIFIER = 0.6; // multiply by nutrient surplus to get difference in thickness
+
+const MINIMUM_NUTRIENTS = 0.4 // if theres nothing above this try to converge. remember its linked to amount of scan steps
 const DIVERGENCE_MINIMUM_THICKNESS = 16;
 
 const NOISE_OCTAVES = 8;
 const NOISE_FALLOFF = 0.25;
+const NOISE_SCALE = 0.04;
+// const NOISE_SCALE = 1;
 
 // Selected font and text
 let theFont;
@@ -49,6 +57,7 @@ const TEXT_SAMPLE_FACTOR = 0.02;
 let runners = [];
 let sections = [];
 let coords = [];
+const starting_points_array = [];
 
 // hoop sizes expressed in du ( dst units: 1du = 0.1mm)
 // these are from the manual. supposedly if we stay within that range they should read but needs testing.
@@ -65,7 +74,7 @@ const HOOP = {
 
 function preload() {
   // theFont = loadFont('../fonts/Avara-Black.otf')
-  theFont = loadFont('../fonts/SonoSans-ExtraBold.otf')
+  theFont = loadFont('../fonts/SonoSans-Bold.otf')
 }
 
 function setup() {
@@ -81,11 +90,34 @@ function setup() {
     ceil(DISPLAY_RATIO * HOOP.l.h) 
   );
 
+
+
+  // // -----------ANNOYING DRAWING NOISE CODE------------------
+  // let noiseLevel = 255;
+  // // Iterate from top to bottom.
+  // for (let y = 0; y < HOOP.l.h; y += 2) {
+  //   // Iterate from left to right.
+  //   for (let x = 0; x < HOOP.l.w; x += 2) {
+  //     // Scale the input coordinates.
+  //     let nx = NOISE_SCALE * x;
+  //     let ny = NOISE_SCALE * y;
+
+  //     // Compute the noise value.
+  //     let c = noiseLevel * noise(nx, ny);
+
+  //     // Draw the point.
+  //     stroke(c);
+  //     point(DISPLAY_RATIO * x, DISPLAY_RATIO * y);
+  //   }
+  // }
+  // // -----------ANNOYING DRAWING NOISE CODE------------------
+
+
+
   angleMode(RADIANS);
   
   // get starting runners from text
   const text_points = [];
-  const starting_points_array = [];
   textFont(theFont);
   for(let i=0; i< theText.length; i++){
     text_points.push(theFont.textToPoints(theText[i], 0, 0, FONT_SIZE, {
@@ -93,31 +125,39 @@ function setup() {
       simplifyThreshold: 0  // You can adjust this to smooth out the points -> i think it removes colinear points which sucks
     }));
 
-    // this still produces more points than i want so maybe ill interpolate by hand
+    // fill("pink")
+    // noStroke()
+    // beginShape()
     starting_points_array.push([]);
     for(let j=0; j<text_points[i].length; j += 1){
-      // i can use this to already do some transformation or filter.
-      starting_points_array[i].push(text_points[i][j]);
-    }
-
-  }
-
-  for(let i=0; i<starting_points_array.length; i++){
-    let first_runner_index = null;
-    for(let j=0; j<starting_points_array[i].length; j++){
-      const pos = createVector(starting_points_array[i][j].x + 200 + i * FONT_SIZE * 0.8, starting_points_array[i][j].y + 500)
-      
       if( (i==0 && j > 10) || (i==3 && j > 13) || (i==4 && j > 11) ){
         break; // very crude mechanism to break inner paths bc theres nowhere for those tendrils to go rn.
         // if it works it works ig. gonna break if i change any sampling/font settings.
         // better to just use a font with no holes. excact geometry is not that important anywat
       }
 
+      starting_points_array[i].push( { 
+        x: text_points[i][j].x + 200 + i * FONT_SIZE * 0.8, 
+        y: text_points[i][j].y + 500,
+        alpha: text_points[i][j].alpha
+      } );
+      // vertex(DISPLAY_RATIO * (text_points[i][j].x + 200 + i * FONT_SIZE * 0.8), DISPLAY_RATIO * (text_points[i][j].y + 500))
+    }
+    // endShape(CLOSE);
+  }
+
+  print(starting_points_array)
+
+  for(let i=0; i<starting_points_array.length; i++){
+    let first_runner_index = null;
+    for(let j=0; j<starting_points_array[i].length; j++){
+      const pos = createVector(starting_points_array[i][j].x, starting_points_array[i][j].y)
+
       // TODO:
         // 1. angle both of these away from the core of the text (+ a bit randomly offset maybe)
         // 2. make the first one point to the previous point and the 2nd to the next
       let dir_out = ( PI * starting_points_array[i][j].alpha / 180 - 0.5*PI ) % (2*PI); 
-      let point_out = p5.Vector.add(createVector(starting_points_array[i][j].x, starting_points_array[i][j].y), p5.Vector.fromAngle(dir_out, 2));
+      let point_out = p5.Vector.add(pos, p5.Vector.fromAngle(dir_out, 1));
       if(ptinxypoly(point_out.x, point_out.y, starting_points_array[i])){
         dir_out = ( dir_out + PI ) % (2*PI); 
       }
@@ -224,7 +264,9 @@ function keyPressed(){
       sections.find(s => !s.embroidered && s.pos.dist(coords[coords.length-1]) <= next_dist).embroider();
     }
 
-    dst.export(coords,"tendrils_text_converge")
+    coords = coords.filter(c => c.x > 0 && c.x < HOOP.l.w && c.y > 0 && c.y < HOOP.l.h );
+
+    dst.export(coords,"tendrils_with_scan")
   }
 
   if(key === 'n' || key === 'N'){
@@ -236,6 +278,24 @@ function keyPressed(){
 }
 
 
+
+function sample_nutrient_map(coord){
+  let falloff = 1;
+  if(coord.x < NUTRIENT_BORDER)            falloff *= coord.x / NUTRIENT_BORDER;
+  if(coord.x > HOOP.l.w - NUTRIENT_BORDER) falloff *= (HOOP.l.w - coord.x) / NUTRIENT_BORDER;
+  if(coord.y < NUTRIENT_BORDER)            falloff *= coord.y / NUTRIENT_BORDER;
+  if(coord.y > HOOP.l.h - NUTRIENT_BORDER) falloff *= (HOOP.l.h - coord.y) / NUTRIENT_BORDER;
+
+  //praying this wont kill performance:
+  for(const poly of starting_points_array){
+    if(ptinxypoly(coord.x, coord.y, poly)){
+      // print('bitch ur in my polygon')
+      return -200;
+    }
+  }
+  
+  return noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE) * falloff ;
+}
 
 // STOLEN HELPER SHIT
 

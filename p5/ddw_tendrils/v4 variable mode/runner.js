@@ -26,89 +26,88 @@ class runner {
         return;
     }
 
-    // // scan for nutrients in a fan.
+    // scan for nutrients in a fan.
     const max_angle = Math.atan(STEP_SIZE / this.thickness);
 
-    // let scan_results = [];
+    let scan_results = [];
 
-    // for(let alpha = -1 * max_angle; alpha <= max_angle; alpha += SCAN_ANGULAR_RESOLUTION){
-    //     let this_scan = {
-    //         alpha: alpha,
-    //         nutrient_samples: [],
-    //         nutrient_total: 0,
-    //         intersections: 0
-    //     };
+    for(let alpha = this.dir - max_angle; alpha <= this.dir + max_angle; alpha += SCAN_ANGULAR_RESOLUTION){
+        let this_scan = {
+            alpha: alpha,
+            nutrient_samples: [],
+            nutrient_total: 0,
+            intersections: 0
+        };
 
-    //     // sample nutrient map at distances
-    //     for(let r = SCAN_RADIAL_RESOLUTION; r <= SCAN_DISTANCE; r += SCAN_RADIAL_RESOLUTION){
-    //         const sample_coord = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir + alpha, r));
-    //         this_scan.nutrient_samples.push( noise(sample_coord.x, sample_coord.y) );
-    //     }
-    //     this_scan.nutrient_total = this_scan.nutrient_samples.reduce((acc, current) => acc + current);
+        // sample nutrient map at distances
+        for(let r = SCAN_RADIAL_RESOLUTION; r <= SCAN_DISTANCE; r += SCAN_RADIAL_RESOLUTION){
+            const sample_coord = p5.Vector.add(this.pos, p5.Vector.fromAngle( alpha, r));
+            this_scan.nutrient_samples.push( sample_nutrient_map(sample_coord) );
+        }
+        this_scan.nutrient_total = this_scan.nutrient_samples.reduce((acc, current) => acc + current);
 
-    //     // find intersections
-    //     const p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir + alpha, SCAN_DISTANCE));
-    //     for(const section of sections){
-    //         if(section.pos.dist(this.pos) - section.thickness > SCAN_DISTANCE) continue;
+        // find intersections
+        const p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(alpha, SCAN_DISTANCE));
+        for(const section of sections){
+            if(!this.last_sections.includes(section.id) && section.pos.dist(this.pos) - section.thickness > SCAN_DISTANCE) continue;
 
-    //         //line segment intersection check
-    //         this_scan.intersections += runner.find_intersection(this.pos, p1, section.p0, section.p1)
-    //     }
+            //line segment intersection check
+            this_scan.intersections += runner.find_intersection(this.pos, p1, section.p0, section.p1)
+        }
 
-    //     scan_results.push(this_scan);
-    // }
-    // print(scan_results);
+        scan_results.push(this_scan);
+    }
+    // calculate total scores based on nutrients - intersections
+    const scan_totals = scan_results.map(s => s.nutrient_total - s.intersections * INTERSECTION_PENALTY * scan_results.length);
 
-    // // calculate total scores based on nutrients - intersections
-    // const scan_totals = scan_results.map(s => s.nutrient_total - s.intersections * INTERSECTION_PENALTY);
+    // if its shit: try converging:
+    if( frameCount > 50 && !scan_totals.some(t => t > MINIMUM_NUTRIENTS)){
+        print(`trying converge in the field!`)
+        for(const runner of runners){
+            if (runner.id != this.id && runner.live && !runner.converging && runner.pos.dist(this.pos) < MAX_CONVERGE_DISTANCE){
+                this.compute_converge(runner.id);
+                if(this.converging){
+                    print(`successful converge!!!!`)
+                    return;
+                }
+            }
+        }
+    }
 
-    // // if its rly shit: try converging:
-    // if(!scan_totals.some(t => t > MINIMUM_NUTRIENTS)){
-    //     // 1. FIND CONVERGE PARTNER(S?)
+    // if thick & theres two good options diverge
+    if(this.thickness > DIVERGENCE_MINIMUM_THICKNESS && scan_totals.filter(t => t > 1.8).length > 1){
+        // i can already find both or trust them to find them themselves after spawning.
+        // lets hope that works for now
+        this.diverge();
+        return;
+    }
 
-    //     // 2. TRY CONVERGING
+    // otherwise just step in the best direction
+    const choice_direction = scan_results[runner.index_of_max(scan_totals)];
 
-    //     // 3. CANCEL IF SUCCESSFUL OTHERWISE CONTINUE WITH OTHER OPTIONS
-    // }
+    this.dir = choice_direction.alpha;
 
-    // // if thick & theres two good options diverge
-    // if(this.thickness > DIVERGENCE_MINIMUM_THICKNESS && scan_totals.filter(t => t > 1.8).length > 1){
-    //     // i can already find both or trust them to find them themselves after spawning.
-    //     // lets hope that works for now
-    //     this.diverge();
-    // }
+    // progress thickness based on nutrients
+    const consumption = choice_direction.nutrient_samples[0] - choice_direction.intersections * INTERSECTION_PENALTY;
+    this.thickness += (consumption - SUSTENANCE_LEVEL) * THICKNESS_MODIFIER;
 
-    // // otherwise just step in the best direction
-    // const choice_direction = scan_results[runner.index_of_max(scan_totals)];
-    
-    // debugger;
+    if(Math.abs((consumption - SUSTENANCE_LEVEL) * THICKNESS_MODIFIER) > 0.5 * this.thickness){
+        //some fucking thing is causing massive thickness drops and its killing my tendrils
+        // debugger;
+        print(`im dying fast lol`)
+    }
 
-    // if step -> shift direction
-
-    // set temporary test angle
-    this.dir = (this.dir + (noise(this.id*100, frameCount)-0.5) * max_angle) % (2*PI);
-    
     // move position
     this.pos.add(p5.Vector.fromAngle(this.dir, STEP_SIZE));
+
   }
 
   step(){
-    // print(`stepping runner ${this.id}`)
-
-    //process nutrients
-        // evaluate nutrient map at new pos
-        // change thickness accordingly
-    this.thickness -= THICKNESS_FALLOFF;
-
     if(this.thickness < MINIMUM_THICKNESS){
         this.live = false;
         return;
     }
 
-    this.push_section();
-  }
-
-  push_section(){
     sections.push(new section(this.pos.copy(), this.dir, this.thickness));
     for(const section of this.last_sections){
         sections[section].next = sections.length-1;
@@ -284,6 +283,8 @@ class runner {
       );
 
     } else{
+        this.converge_path = [];
+        partner.converge_path = [];
         print(`failed to match convergence for runners ${this.id} and ${partner.id}`)
     }
 
@@ -295,6 +296,10 @@ class runner {
     }
 
     this.pos = this.converge_path.shift();
+
+    // do process nutrients when converging but dont check for intersections idk.
+    const consumption = sample_nutrient_map(this.pos);
+    this.thickness += (consumption - SUSTENANCE_LEVEL) * THICKNESS_MODIFIER;
 
     if(this.converge_path.length == 0){
         const partner = runners[this.converge_partner];
@@ -316,7 +321,7 @@ class runner {
 
             runners[runners.length - 1].last_sections = [this.last_sections[0], partner.last_sections[0]];
             
-            runners[runners.length - 1].push_section();
+            runners[runners.length - 1].step();
 
             return;
         }
@@ -332,28 +337,28 @@ class runner {
   }
 
   diverge(){
-        this.push_section();
-        this.live = false;
-        const thickness_ratio = 0.2 + random()*0.6;
-        const pos1 = p5.Vector.add(this.pos, p5.Vector.fromAngle((this.dir + 0.5*PI) % (2*PI), this.thickness * (1-thickness_ratio) * 0.5));
-        const pos2 = p5.Vector.add(this.pos, p5.Vector.fromAngle((this.dir - 0.5*PI) % (2*PI), this.thickness * thickness_ratio * 0.5));
-        runners.push(new runner(
-            pos1.x,
-            pos1.y,
-            this.dir,
-            this.thickness * thickness_ratio
-        ));
-        runners.push(new runner(
-            pos2.x,
-            pos2.y,
-            this.dir,
-            this.thickness * (1-thickness_ratio)
-        ));
+    this.step();
+    this.live = false;
+    const thickness_ratio = 0.2 + random()*0.6;
+    const pos1 = p5.Vector.add(this.pos, p5.Vector.fromAngle((this.dir + 0.5*PI) % (2*PI), this.thickness * (1-thickness_ratio) * 0.5));
+    const pos2 = p5.Vector.add(this.pos, p5.Vector.fromAngle((this.dir - 0.5*PI) % (2*PI), this.thickness * thickness_ratio * 0.5));
+    runners.push(new runner(
+        pos1.x,
+        pos1.y,
+        this.dir,
+        this.thickness * thickness_ratio * 1.1
+    ));
+    runners.push(new runner(
+        pos2.x,
+        pos2.y,
+        this.dir,
+        this.thickness * (1-thickness_ratio) * 1.1
+    ));
 
-        runners[runners.length - 2 + Math.round(thickness_ratio)].last_sections = [this.last_sections[0]]
+    runners[runners.length - 2 + Math.round(thickness_ratio)].last_sections = [this.last_sections[0]]
 
-        fill("red")
-        circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
+    fill("red")
+    circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
   }
 
 

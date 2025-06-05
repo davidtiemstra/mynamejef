@@ -7,6 +7,7 @@ class section{
         this.embroidered = false;
         this.p0 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, this.thickness*0.5).rotate(0.5*PI));
         this.p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, this.thickness*0.5).rotate(-0.5*PI));
+        this.id = sections.length - 1
     }
 
     embroider(){

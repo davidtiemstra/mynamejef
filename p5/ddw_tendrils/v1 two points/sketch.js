@@ -65,7 +65,7 @@ function setup() {
   ));
 
   // set all to convergent mode with eachother
-  runners[0].computeConverge(1);
+  runners[0].compute_converge(1);
 }
 
 function draw() {

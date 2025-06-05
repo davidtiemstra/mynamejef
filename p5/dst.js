@@ -4,10 +4,10 @@
 // 2.x end triplet: 00 00 F3
 
 // body decoding is actually insane lmao
-// bit:      7       6       5       4       3       2       1       0
-// Byte 1	  y+1	    y-1	    y+9	    y-9	    x-9	    x+9	    x-1	    x+1
-// Byte 2	  y+3	    y-3	    y+27	  y-27  	x-27	  x+27	  x-3	    x+3
-// Byte 3	  jump	  col     y+81	  y-81	  x-81	  x+81  	set	    set
+// bit:       7       6       5       4       3       2       1       0
+// Byte 1     y+1     y-1     y+9     y-9     x-9     x+9     x-1     x+1
+// Byte 2     y+3     y-3     y+27    y-27    x-27    x+27    x-3     x+3
+// Byte 3     jump    col     y+81    y-81    x-81    x+81    set     set
   
 class dst{
   

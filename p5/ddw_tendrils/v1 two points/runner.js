@@ -99,7 +99,7 @@ class runner {
   }
 
   // convergence path calculation is handled by the runner that initializes the convergence.
-  computeConverge(partner_id){
+  compute_converge(partner_id){
     const partner = runners[partner_id];
 
     // start computing the actual path :( ahhhh
