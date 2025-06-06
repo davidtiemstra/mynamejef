@@ -46,10 +46,24 @@ class runner {
         }
         this_scan.nutrient_total = this_scan.nutrient_samples.reduce((acc, current) => acc + current);
 
-        // find intersections
+        // find intersections. big performance hit try to improve.
+        // get sections from index:
+        let sections_by_index = [];
+
+        const xi = Math.floor(this.pos.x / IX_HALF_SQUARE_SIZE);
+        const yi = Math.floor(this.pos.y / IX_HALF_SQUARE_SIZE);
+
+        sections_by_index = sections_by_index.concat(ix_sections[xi][yi]);
+        if(xi>0) sections_by_index = sections_by_index.concat(ix_sections[xi-1][yi]);
+        if(yi>0) sections_by_index = sections_by_index.concat(ix_sections[xi][yi-1]);
+        if(xi>0 && yi>0) sections_by_index = sections_by_index.concat(ix_sections[xi-1][yi-1]);
+
+        sections_by_index = [...new Set(sections_by_index)];
+
         const p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(alpha, SCAN_DISTANCE));
-        for(const section of sections){
-            if(!this.last_sections.includes(section.id) && section.pos.dist(this.pos) - section.thickness > SCAN_DISTANCE) continue;
+        for(const section_id of sections_by_index){
+            const section = sections[section_id];
+            if(!this.last_sections.includes(section_id) && section.pos.dist(this.pos) - section.thickness > SCAN_DISTANCE) continue;
 
             //line segment intersection check
             this_scan.intersections += runner.find_intersection(this.pos, p1, section.p0, section.p1)
@@ -58,7 +72,7 @@ class runner {
         scan_results.push(this_scan);
     }
     // calculate total scores based on nutrients - intersections
-    const scan_totals = scan_results.map(s => s.nutrient_total - s.intersections * INTERSECTION_PENALTY * scan_results.length);
+    const scan_totals = scan_results.map(s => s.nutrient_total - s.intersections * INTERSECTION_PENALTY * scan_results[0].nutrient_samples.length);
 
     // if its shit: try converging:
     if( frameCount > 50 && !scan_totals.some(t => t > MINIMUM_NUTRIENTS)){
@@ -75,9 +89,11 @@ class runner {
     }
 
     // if thick & theres two good options diverge
-    if(this.thickness > DIVERGENCE_MINIMUM_THICKNESS && scan_totals.filter(t => t > 1.8).length > 1){
+    if(this.thickness > DIVERGENCE_MINIMUM_THICKNESS && scan_totals.filter(t => t > DIVERGENCE_MINIMUM_NUTRIENTS * scan_results[0].nutrient_samples.length).length > 1){
         // i can already find both or trust them to find them themselves after spawning.
         // lets hope that works for now
+        this.pos.add(p5.Vector.fromAngle(this.dir, STEP_SIZE));
+        this.step();
         this.diverge();
         return;
     }
@@ -108,19 +124,55 @@ class runner {
         return;
     }
 
-    sections.push(new section(this.pos.copy(), this.dir, this.thickness));
+    // grow a flower
+    if(this.last_sections.length > 0 && (flowers.length + 10) * SECTIONS_PER_FLOWER < sections.length && random() > 0.95){
+        //check surrounding thicknesses
+        let depth = 0;
+        let checking_section = sections[this.last_sections[0]];
+        let total_thickness = checking_section.thickness;
+        while(depth < 15){
+            checking_section = sections.find(s => s.next == checking_section.id);
+            if(!checking_section) {
+                break;
+            }
+            total_thickness += checking_section.thickness;
+            depth++;
+        }
+        print(`flower depth: ${depth}`)
+        const flower = {
+            pos: this.pos,
+            radius: total_thickness*FLOWER_SIZE_RATIO/15
+        }
+        flowers.push(flower)
+        stroke("pink")
+        strokeWeight(4);
+        circle(flower.pos.x*DISPLAY_RATIO, flower.pos.y*DISPLAY_RATIO, flower.radius)
+        strokeWeight(1);
+    }
+
+    sections.push(new section(this.pos.copy(), this.dir, this.thickness, this.last_sections[0] ?? null ));
+
+    let p0;
     for(const section of this.last_sections){
         sections[section].next = sections.length-1;
+        p0 = sections[section].p1;
     }
+
     this.last_sections = [sections.length - 1];
     
-    const p0 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, this.thickness*0.5).rotate(0.5*PI));
-    const p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, this.thickness*0.5).rotate(-0.5*PI));
-    line(
+    const p1 = sections[this.last_sections[0]].p0;
+    const p2 = sections[this.last_sections[0]].p1;
+    if(p0) line(
         DISPLAY_RATIO * p0.x,
         DISPLAY_RATIO * p0.y,
         DISPLAY_RATIO * p1.x,
         DISPLAY_RATIO * p1.y
+    );
+    line(
+        DISPLAY_RATIO * p1.x,
+        DISPLAY_RATIO * p1.y,
+        DISPLAY_RATIO * p2.x,
+        DISPLAY_RATIO * p2.y
     );
 
   }
@@ -147,8 +199,8 @@ class runner {
     while(check_pos.dist(this.pos) < MAX_CONVERGE_DISTANCE){
         check_pos.add(p5.Vector.fromAngle(avg_dir, STEP_SIZE));
 
-        // //temp debugging
-        circle(DISPLAY_RATIO * check_pos.x,DISPLAY_RATIO * check_pos.y,2)
+        // --------- vvv CONVERGENCE DEBUGGING LINES vvv ----------
+        // circle(DISPLAY_RATIO * check_pos.x,DISPLAY_RATIO * check_pos.y,2)
 
         // now compute bezier towards goal for both
         let path1 = [];
@@ -240,47 +292,38 @@ class runner {
         partner.converge_partner = this.id;
         partner.converge_complete = false;
 
-        fill("purple")
+        // --------- vvv CONVERGENCE DEBUGGING LINES vvv ----------
+
+        fill("green")
         noStroke();
         text(this.id, 
             DISPLAY_RATIO * check_pos.x, 
             DISPLAY_RATIO * check_pos.y)
 
         noFill()
-        stroke("purple")
-        line(
-            DISPLAY_RATIO * this.pos.x, 
-            DISPLAY_RATIO * this.pos.y, 
-            DISPLAY_RATIO * check_pos.x, 
-            DISPLAY_RATIO * check_pos.y)
-        line(
-            DISPLAY_RATIO * partner.pos.x, 
-            DISPLAY_RATIO * partner.pos.y, 
-            DISPLAY_RATIO * check_pos.x, 
-            DISPLAY_RATIO * check_pos.y)
+        stroke("green")
+
+        beginShape();
+        for(const pos of this.converge_path){
+            vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
+        }
+        endShape()
+
+        beginShape();
+        for(const pos of partner.converge_path){
+            vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
+        }
+        endShape()
+
         const pdir = p5.Vector.add(check_pos, p5.Vector.fromAngle(avg_dir, 10))
         line(
             DISPLAY_RATIO * pdir.x, 
             DISPLAY_RATIO * pdir.y, 
             DISPLAY_RATIO * check_pos.x, 
             DISPLAY_RATIO * check_pos.y)
-            
-      stroke("blue")
-      const p0 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, 12));
-      line(
-          DISPLAY_RATIO * this.pos.x,
-          DISPLAY_RATIO * this.pos.y,
-          DISPLAY_RATIO * p0.x,
-          DISPLAY_RATIO * p0.y
-      );
-      stroke("green")
-      const p1 = p5.Vector.add(partner.pos, p5.Vector.fromAngle(partner.dir, 12));
-      line(
-          DISPLAY_RATIO * partner.pos.x,
-          DISPLAY_RATIO * partner.pos.y,
-          DISPLAY_RATIO * p1.x,
-          DISPLAY_RATIO * p1.y
-      );
+
+
+        // --------- ^^^ CONVERGENCE DEBUGGING LINES ^^^ ----------
 
     } else{
         this.converge_path = [];
@@ -337,7 +380,6 @@ class runner {
   }
 
   diverge(){
-    this.step();
     this.live = false;
     const thickness_ratio = 0.2 + random()*0.6;
     const pos1 = p5.Vector.add(this.pos, p5.Vector.fromAngle((this.dir + 0.5*PI) % (2*PI), this.thickness * (1-thickness_ratio) * 0.5));
@@ -357,8 +399,9 @@ class runner {
 
     runners[runners.length - 2 + Math.round(thickness_ratio)].last_sections = [this.last_sections[0]]
 
-    fill("red")
-    circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
+    print('divergin')
+    // fill("red")
+    // circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
   }
 
 
@@ -371,12 +414,13 @@ class runner {
     const p3 = target_pos;
 
     const bezier_array = [];
-    let t = 0;
+    let t = 0.01; // if this is 0 they all get instakilled by the point in polygon check at the start lol
     while(t < 1){
-        const sample_length = runner.sample_bezier(t, p0, p1, p2, p3).dist(runner.sample_bezier(t + 0.1, p0, p1, p2, p3));
-        t += 0.1 * STEP_SIZE / sample_length;
 
         bezier_array.push(runner.sample_bezier(t, p0, p1, p2, p3));
+
+        const sample_length = runner.sample_bezier(t, p0, p1, p2, p3).dist(runner.sample_bezier(t + 0.1, p0, p1, p2, p3));
+        t += 0.1 * STEP_SIZE / sample_length;
         
         // do a convoluted check to make sure its not breaking the minimum angle shit
         const i = bezier_array.length - 1;
@@ -385,6 +429,10 @@ class runner {
         const dir1 = p5.Vector.sub(bezier_array[i-1], bezier_array[i-2])
         const dir2 = p5.Vector.sub(bezier_array[i], bezier_array[i-1])
         if(Math.abs(dir1.angleBetween(dir2)) > max_angle * 2){
+            return [];
+        }
+
+        if(bezier_array[i].dist(bezier_array[i-1]) > 2 * STEP_SIZE){
             return [];
         }
     }
