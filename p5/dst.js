@@ -120,10 +120,15 @@ class dst{
         let stitches = [];
 
         for(let i=0; i < coordinates.length; i++){
+            if(coordinates[i] == "STOP") continue
             coordinates[i] = createVector(round(coordinates[i].x), round(coordinates[i].y))
         }
         
         for(let index=1; index < coordinates.length; index++){
+            if(coordinates[index] == "STOP") {
+                stitches.push("STOP");
+                coordinates.splice(index,1);
+            }
             stitches.push([ 
                      coordinates[index].x - coordinates[index-1].x , 
                 -1* (coordinates[index].y - coordinates[index-1].y )
@@ -136,7 +141,20 @@ class dst{
             
         // writing the stitches
         for(let i=0; i< stitches.length; i++){
-            const stitch = stitches[i];
+            let stitch = stitches[i];
+
+            // dit is niet oke we moeten dit niet doen.
+            if(stitch == "STOP"){
+                print(stitch)
+                let bits = "000000000000000011000011";
+                let bytes = new Uint8Array(3);
+                bytes.set([
+                    parseInt(bits.slice(0,8),2),
+                    parseInt(bits.slice(8,16),2),
+                    parseInt(bits.slice(16),2)
+                ]);
+                stitchdata = dst.concatBytes(stitchdata, bytes);
+            }
             
             // check for jump stitch
             if(max( abs(stitch[0]), abs(stitch[1]) ) < 122){
