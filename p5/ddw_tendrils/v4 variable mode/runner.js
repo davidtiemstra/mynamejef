@@ -14,6 +14,8 @@ class runner {
     this.converge_complete = false;
     this.converge_partner = null;
 
+    this.age = 0;
+
     this.step();
   }
   
@@ -63,6 +65,7 @@ class runner {
         const p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(alpha, SCAN_DISTANCE));
         for(const section_id of sections_by_index){
             const section = sections[section_id];
+            if(!section) {continue;}
             if(!this.last_sections.includes(section_id) && section.pos.dist(this.pos) - section.thickness > SCAN_DISTANCE) continue;
 
             //line segment intersection check
@@ -75,8 +78,8 @@ class runner {
     const scan_totals = scan_results.map(s => s.nutrient_total - s.intersections * INTERSECTION_PENALTY * scan_results[0].nutrient_samples.length);
 
     // if its shit: try converging:
-    if( frameCount > 50 && !scan_totals.some(t => t > MINIMUM_NUTRIENTS)){
-        print(`trying converge in the field!`)
+    if( frameCount > 50 && this.age > 10 && !scan_totals.some(t => t > MINIMUM_NUTRIENTS)){
+        // print(`trying converge in the field!`)
         for(const runner of runners){
             if (runner.id != this.id && runner.live && !runner.converging && runner.pos.dist(this.pos) < MAX_CONVERGE_DISTANCE){
                 this.compute_converge(runner.id);
@@ -93,8 +96,14 @@ class runner {
         // i can already find both or trust them to find them themselves after spawning.
         // lets hope that works for now
         this.pos.add(p5.Vector.fromAngle(this.dir, STEP_SIZE));
+
+        // const dir1 = scan_results.splice(runner.index_of_max(scan_totals), 1)[0].alpha;
+        // scan_totals.splice(runner.index_of_max(scan_totals));
+        // const dir2 = scan_results.splice(runner.index_of_max(scan_totals), 1)[0].alpha;
+
         this.step();
-        this.diverge();
+
+        this.diverge(this.dir, this.dir);
         return;
     }
 
@@ -119,8 +128,24 @@ class runner {
   }
 
   step(){
+    this.age++;
+
     if(this.thickness < MINIMUM_THICKNESS){
         this.live = false;
+
+        //try to make a little point?
+        while(this.thickness > 4){
+            const coord = this.pos;
+            if(coord.x < 0 || coord.x > HOOP.l.w || coord.y < 0 || coord.y > HOOP.l.h) {
+                return;
+            }
+            sections.push(new section(this.pos.copy(), this.dir, this.thickness, this.last_sections[0] ?? null ));
+            this.last_sections = [sections.length-1];
+            this.pos.add(p5.Vector.fromAngle(this.dir, STEP_SIZE));
+
+            this.thickness--;
+        }
+
         return;
     }
 
@@ -141,7 +166,8 @@ class runner {
         print(`flower depth: ${depth}`)
         const flower = {
             pos: this.pos,
-            radius: total_thickness*FLOWER_SIZE_RATIO/15
+            radius: total_thickness*FLOWER_SIZE_RATIO/15,
+            noise: runners.filter(r => r.live).length
         }
         flowers.push(flower)
         stroke("pink")
@@ -159,21 +185,6 @@ class runner {
     }
 
     this.last_sections = [sections.length - 1];
-    
-    const p1 = sections[this.last_sections[0]].p0;
-    const p2 = sections[this.last_sections[0]].p1;
-    if(p0) line(
-        DISPLAY_RATIO * p0.x,
-        DISPLAY_RATIO * p0.y,
-        DISPLAY_RATIO * p1.x,
-        DISPLAY_RATIO * p1.y
-    );
-    line(
-        DISPLAY_RATIO * p1.x,
-        DISPLAY_RATIO * p1.y,
-        DISPLAY_RATIO * p2.x,
-        DISPLAY_RATIO * p2.y
-    );
 
   }
 
@@ -205,7 +216,7 @@ class runner {
         // now compute bezier towards goal for both
         let path1 = [];
         let path2 = [];
-        for(let handle_length = 20; handle_length < 70; handle_length += 5){
+        for(let handle_length = 20; handle_length < MAX_BEZIER_HANDLE_LENGTH; handle_length += 5){
             if(!path1.length) path1 = this.get_bezier(check_pos, avg_dir, handle_length);
             if(!path2.length) path2 = partner.get_bezier(check_pos, avg_dir, handle_length);
         }
@@ -221,16 +232,16 @@ class runner {
         }
         
         // commented for debugging
-        // if(path1 + path2 > path_length){
-        //     break;
-        // } 
+        if(path1_length + path2_length > path_length){
+            break;
+        } 
         
         this.converge_path = path1;
         partner.converge_path = path2;
         
-        path_length = path1 + path2;
+        path_length = path1_length + path2_length;
 
-        break; // temp debugging
+        // break; // temp debugging
     }
 
     print(`final path_lengths: ${path1_length}, ${path2_length}`);
@@ -379,29 +390,31 @@ class runner {
     this.dir = p5.Vector.sub(this.converge_path[0], this.pos).heading();
   }
 
-  diverge(){
+  diverge(dir1, dir2){
     this.live = false;
-    const thickness_ratio = 0.2 + random()*0.6;
-    const pos1 = p5.Vector.add(this.pos, p5.Vector.fromAngle((this.dir + 0.5*PI) % (2*PI), this.thickness * (1-thickness_ratio) * 0.5));
-    const pos2 = p5.Vector.add(this.pos, p5.Vector.fromAngle((this.dir - 0.5*PI) % (2*PI), this.thickness * thickness_ratio * 0.5));
+    const minimum_ratio = (MINIMUM_THICKNESS + 2) / this.thickness;
+    const thickness_ratio = minimum_ratio + random()*(1.0 - minimum_ratio*2);
+    const pos1 = p5.Vector.add(this.pos, p5.Vector.fromAngle((dir1 + 0.5*PI) % (2*PI), this.thickness * (1-thickness_ratio) * 0.5));
+    const pos2 = p5.Vector.add(this.pos, p5.Vector.fromAngle((dir2 - 0.5*PI) % (2*PI), this.thickness * thickness_ratio * 0.5));
     runners.push(new runner(
         pos1.x,
         pos1.y,
-        this.dir,
+        dir1,
         this.thickness * thickness_ratio * 1.1
     ));
     runners.push(new runner(
         pos2.x,
         pos2.y,
-        this.dir,
+        dir2,
         this.thickness * (1-thickness_ratio) * 1.1
     ));
 
     runners[runners.length - 2 + Math.round(thickness_ratio)].last_sections = [this.last_sections[0]]
 
     print('divergin')
-    // fill("red")
-    // circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
+    fill("red")
+    circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
+    noFill();
   }
 
 

@@ -10,14 +10,32 @@ class section{
         this.p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, this.thickness*0.5).rotate(-0.5*PI));
         this.id = sections.length;
 
+        if(this.pos.x < 0 || this.pos.x > HOOP.l.w || this.pos.y < 0 || this.pos.y > HOOP.l.h){
+            return;
+        }
+
+        const pp = sections[this.previous]?.p1;        
+        if(pp) line(
+            DISPLAY_RATIO * pp.x,
+            DISPLAY_RATIO * pp.y,
+            DISPLAY_RATIO * this.p0.x,
+            DISPLAY_RATIO * this.p0.y
+        );
+        line(
+            DISPLAY_RATIO * this.p0.x,
+            DISPLAY_RATIO * this.p0.y,
+            DISPLAY_RATIO * this.p1.x,
+            DISPLAY_RATIO * this.p1.y
+        );
+
         // index yourself:
         const xi = Math.floor(this.pos.x / IX_HALF_SQUARE_SIZE)
         const yi = Math.floor(this.pos.y / IX_HALF_SQUARE_SIZE)
 
-        ix_sections[xi][yi].push(this.id)
-        if(xi>0) ix_sections[xi-1][yi].push(this.id)
-        if(yi>0) ix_sections[xi][yi-1].push(this.id)
-        if(xi>0 && yi>0) ix_sections[xi-1][yi-1].push(this.id)
+        ix_sections[xi][yi]?.push(this.id)
+        if(xi>0) ix_sections[xi-1][yi]?.push(this.id)
+        if(yi>0) ix_sections[xi][yi-1]?.push(this.id)
+        if(xi>0 && yi>0) ix_sections[xi-1][yi-1]?.push(this.id)
     }
 
     embroider(){

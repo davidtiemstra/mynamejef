@@ -23,7 +23,10 @@ todo/versions:
 [ ] do hella parameter tweaks. 
     id like to get it more angular again actually that was sick. 
     give a preference for straight angles or smth
-[ ] save good parameter combinations
+[x] save good parameter combinations
+[?] give them a little point when they die so its more like tendrils and less like wormse
+[ ] make it not constantly diverge and immediately converge again
+[ ] make it converge more in the wild
 [-] implement flowers
 
 */
@@ -32,12 +35,15 @@ todo/versions:
 // IVE MADE ALL PARAMETERS THAT I THINK ARE FUN TO TWEAK LETS INSTEAD OF CONSTS
 
 // tweak these to determine growth behaviour
-let INTERSECTION_PENALTY = 0.3;
-let SUSTENANCE_LEVEL = 0.4; // amount of nutrients a tendril needs to break even
+let INTERSECTION_PENALTY = 0.8;
+let SUSTENANCE_LEVEL = 0.35; // amount of nutrients a tendril needs to break even
 let THICKNESS_MODIFIER = 0.6; // multiply by nutrient surplus to get difference in thickness
+let START_THICKNESS = 20;
+let MINIMUM_THICKNESS = 12;
+let MAX_CONVERGE_DISTANCE = 125;
 
-let MINIMUM_NUTRIENTS = 0.4 // if theres nothing above this try to converge. remember its linked to amount of scan steps
-const DIVERGENCE_MINIMUM_THICKNESS = 16;
+let MINIMUM_NUTRIENTS = SUSTENANCE_LEVEL // if theres nothing above this try to converge. remember its linked to amount of scan steps
+const DIVERGENCE_MINIMUM_THICKNESS = MINIMUM_THICKNESS * 2.5;
 const DIVERGENCE_MINIMUM_NUTRIENTS = 0.4;
 
 let SECTIONS_PER_FLOWER = 600;
@@ -45,30 +51,27 @@ let FLOWER_SIZE_RATIO = 2.0;
 
 let NOISE_OCTAVES = 8;
 let NOISE_FALLOFF = 0.25;
-let NOISE_SCALE = 0.04;
-// let NOISE_SCALE = 1;
+let NOISE_SCALE = 0.04; //most interesting one honestly
 
 // Selected font and text
-let theText = 'PISRAT';
-let theFont;
-const FONT_SIZE = 264;
-const TEXT_SAMPLE_FACTOR = 0.02;
-let text_angle = 0;
+let theText = 'distica';
+const FONT_FILENAME = "Blackout.ttf"
+const FONT_SIZE = 204;
+const TEXT_SAMPLE_FACTOR = 0.025;
+const TEXT_SPACING = 0.13
 
 const STEP_SIZE = 4; //in DU
-const START_THICKNESS = 18;
-const MAX_CONVERGE_DISTANCE = 75;
 const NUTRIENT_BORDER = 50; // make nutrients falloff near border
 const BORDER_STEEPNESS = 5;
-const MINIMUM_THICKNESS = 4; // i can maybe lower this if we play with the tension to get less bobbin pullthrough at the tips
-const THICKNESS_FALLOFF = 0.4; //only for debugging
-// const DISPLAY_RATIO = 2;
-const DISPLAY_RATIO = 0.55; // real value for laptop screen
+const DISPLAY_RATIO = 1;
+// const DISPLAY_RATIO = 0.4; // real value for pc screen
+// const DISPLAY_RATIO = 0.55; // real value for laptop screen
 
 // i can tweak these mostly to trade performance for scan resolution
 const SCAN_ANGULAR_RESOLUTION = 0.08;
 const SCAN_RADIAL_RESOLUTION = STEP_SIZE;
 const SCAN_DISTANCE = SCAN_RADIAL_RESOLUTION * 3;
+const MAX_BEZIER_HANDLE_LENGTH = 100;
 
 const IX_HALF_SQUARE_SIZE = 50; // this is just for indexing the sections. should go right as long as this is higher than scan distance
 
@@ -79,6 +82,9 @@ let flowers = [];
 let coords = [];
 let starting_points_array = [];
 const text_points = [];
+
+let theFont;
+let text_angle = 0;
 
 // hoop sizes expressed in du ( dst units: 1du = 0.1mm)
 // these are from the manual. supposedly if we stay within that range they should read but needs testing.
@@ -94,8 +100,7 @@ const HOOP = {
 }
 
 function preload() {
-  // theFont = loadFont('../fonts/Avara-Black.otf')
-  theFont = loadFont('../fonts/SonoSans-Bold.otf')
+  theFont = loadFont(`../fonts/${FONT_FILENAME}`)
 }
 
 function setup() {
@@ -146,24 +151,27 @@ function draw() {
 
   if(runners.length==0){
     background(255)
+    strokeWeight(3)
     rect(0,0,width,height)
+    strokeWeight(1)
 
     starting_points_array = [];
+    let x_cursor = 0;
     for(let i=0; i< text_points.length; i++){
       noFill();
       stroke(0);
       beginShape()
       starting_points_array.push([]);
       for(let j=0; j<text_points[i].length; j += 1){
-        if( (i==0 && j > 10) || (i==3 && j > 13) || (i==4 && j > 11) ){
-          break; // very crude mechanism to break inner paths bc theres nowhere for those tendrils to go rn.
-          // if it works it works ig. gonna break if i change any sampling/font settings.
-          // better to just use a font with no holes. excact geometry is not that important anywat
-        }
+        // if( (i==0 && j > 10) || (i==3 && j > 13) || (i==4 && j > 11) ){
+        //   break; // very crude mechanism to break inner paths bc theres nowhere for those tendrils to go rn.
+        //   // if it works it works ig. gonna break if i change any sampling/font settings.
+        //   // better to just use a font with no holes. excact geometry is not that important anywat
+        // }
 
         // also rotate text.
         let text_point = createVector(
-          text_points[i][j].x + i * FONT_SIZE * 0.8 - FONT_SIZE * 2.5 , 
+          text_points[i][j].x + x_cursor - FONT_SIZE * 2.5 , 
           text_points[i][j].y + FONT_SIZE * 0.3);
         text_point.rotate(text_angle);
         
@@ -175,6 +183,7 @@ function draw() {
         vertex(DISPLAY_RATIO * starting_points_array[i][j].x, DISPLAY_RATIO * starting_points_array[i][j].y)
       }
       endShape(CLOSE);
+      x_cursor +=  FONT_SIZE * TEXT_SPACING * textWidth(theText[i]);
     }
   }
 
@@ -244,7 +253,7 @@ function mouseClicked(){
 }
 
 function mouseWheel(event) {
-  text_angle = (text_angle + Math.sign(event.delta) * 0.1 * PI) % (2*PI);
+  text_angle = (text_angle + Math.sign(event.delta) * 0.02 * PI) % (2*PI);
 }
 
 function keyPressed(){
@@ -265,7 +274,10 @@ function keyPressed(){
 
     coords = coords.filter(c => c.x > 0 && c.x < HOOP.l.w && c.y > 0 && c.y < HOOP.l.h );
 
-    dst.export(coords,"tendrils_with_scan")
+    let timecode = Date.now()-1749200000000;
+    let params = `let INTERSECTION_PENALTY = ${INTERSECTION_PENALTY};\nlet SUSTENANCE_LEVEL = ${SUSTENANCE_LEVEL}; // amount of nutrients a tendril needs to break even\nlet THICKNESS_MODIFIER = ${THICKNESS_MODIFIER}; // multiply by nutrient surplus to get difference in thickness\nlet MINIMUM_THICKNESS = ${MINIMUM_THICKNESS};let START_THICKNESS = 18;\nlet MINIMUM_THICKNESS = ${MINIMUM_THICKNESS};\nlet MAX_CONVERGE_DISTANCE = ${MAX_CONVERGE_DISTANCE};\n\nlet MINIMUM_NUTRIENTS = ${MINIMUM_NUTRIENTS} // if theres nothing above this try to converge. remember its linked to amount of scan steps\nconst DIVERGENCE_MINIMUM_THICKNESS = ${DIVERGENCE_MINIMUM_THICKNESS};\nconst DIVERGENCE_MINIMUM_NUTRIENTS = ${DIVERGENCE_MINIMUM_NUTRIENTS};\n\nlet SECTIONS_PER_FLOWER = ${SECTIONS_PER_FLOWER};\nlet FLOWER_SIZE_RATIO = ${FLOWER_SIZE_RATIO};\n\nlet NOISE_OCTAVES = ${NOISE_OCTAVES};\nlet NOISE_FALLOFF = ${NOISE_FALLOFF};\nlet NOISE_SCALE = ${NOISE_SCALE};`;
+    save([params], `tendrils_params_${timecode}.txt`)
+    dst.export(coords,`tendrils_params_${timecode}`)
   }
   if(key === 'r' || key === 'R'){
     print(runners)
