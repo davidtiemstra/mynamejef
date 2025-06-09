@@ -121,8 +121,8 @@ function setup() {
   noiseDetail(NOISE_OCTAVES, NOISE_FALLOFF);
 
 
-  // petal_count = 2 + round(random()*MAX_PETAL_COUNT);
-  petal_count = 4;
+  petal_count = 2 + round(random()*MAX_PETAL_COUNT);
+  // petal_count = 4;
   flower_attraction = 100 + random() * 100000
   // flower_attraction = 1000;
   
