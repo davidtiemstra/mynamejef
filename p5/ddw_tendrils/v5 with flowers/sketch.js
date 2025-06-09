@@ -36,7 +36,7 @@ todo/versions:
 
 // tweak these to determine growth behaviour
 let INTERSECTION_PENALTY = 0.8;
-let SUSTENANCE_LEVEL = 0.35; // amount of nutrients a tendril needs to break even
+let SUSTENANCE_LEVEL = 0.32; // amount of nutrients a tendril needs to break even
 let THICKNESS_MODIFIER = 0.6; // multiply by nutrient surplus to get difference in thickness
 let START_THICKNESS = 20;
 let MINIMUM_THICKNESS = 12;
@@ -46,26 +46,28 @@ let MINIMUM_NUTRIENTS = SUSTENANCE_LEVEL // if theres nothing above this try to 
 const DIVERGENCE_MINIMUM_THICKNESS = MINIMUM_THICKNESS * 2.5;
 const DIVERGENCE_MINIMUM_NUTRIENTS = 0.4;
 
-let SECTIONS_PER_FLOWER = 400;
-let FLOWER_SIZE_RATIO = 2.0;
+let SECTIONS_PER_FLOWER = 350;
+let FLOWER_SIZE_RATIO = 4.2;
+const FLOWER_START_OFFSET = 10; // set to 10 for words
 
 let NOISE_OCTAVES = 8;
 let NOISE_FALLOFF = 0.25;
 let NOISE_SCALE = 0.04; //most interesting one honestly
 
 const FLOWER_STEP_SIZE = 15;
-const ITERATION_COUNT = 3;
+const ITERATION_COUNT = 2;
 const MAX_PETAL_COUNT = 8;
 const FLOWER_ITERATION_OFFSET = 0.05;
 
 // Selected font and text
-let theText = 'papu1';
-const FONT_FILENAME = "Blackout.ttf"
-const FONT_SIZE = 204;
-const TEXT_SAMPLE_FACTOR = 0.025;
-const TEXT_SPACING = 0.13
+// let theText = 'papu1';
+let theText = 'otu';
+const FONT_FILENAME = "Flexi_IBM_VGA_False.ttf"
+const FONT_SIZE = 324;
+const TEXT_SAMPLE_FACTOR = 0.03;
+const TEXT_SPACING = 0.09
 
-const STEP_SIZE = 4; //in DU
+const STEP_SIZE = 6; //in DU
 const NUTRIENT_BORDER = 50; // make nutrients falloff near border
 const BORDER_STEEPNESS = 5;
 const DISPLAY_RATIO = 1;
@@ -119,9 +121,10 @@ function setup() {
   noiseDetail(NOISE_OCTAVES, NOISE_FALLOFF);
 
 
-  petal_count = 2 + round(random()*MAX_PETAL_COUNT);
-  // flower_attraction = 100 + random() * 100000
-  flower_attraction = 1000;
+  // petal_count = 2 + round(random()*MAX_PETAL_COUNT);
+  petal_count = 4;
+  flower_attraction = 100 + random() * 100000
+  // flower_attraction = 1000;
   
   flower_profile = Flower.generateUnitProfile(
       int(random(1,15)),  // profile points
@@ -174,12 +177,23 @@ function draw() {
     rect(0,0,width,height)
     strokeWeight(1)
 
+    // im drawing the text at full resolution now not the sample resolution.
+    // u can view sample resultion by uncommenting beginshape/vertex/endshape below.
+    noFill();
+    stroke(0);
+    textSize(FONT_SIZE);
+    textAlign(CENTER, CENTER)
+    push();
+    translate( mouseX / DISPLAY_RATIO , mouseY / DISPLAY_RATIO)
+    rotate(text_angle)
+    text(theText,0,0);
+    pop();
+    textSize(11);
+
     starting_points_array = [];
     let x_cursor = 0;
     for(let i=0; i< text_points.length; i++){
-      noFill();
-      stroke(0);
-      beginShape()
+      // beginShape()
       starting_points_array.push([]);
       for(let j=0; j<text_points[i].length; j += 1){
         // if( (i==0 && j > 10) || (i==3 && j > 13) || (i==4 && j > 11) ){
@@ -190,8 +204,8 @@ function draw() {
 
         // also rotate text.
         let text_point = createVector(
-          text_points[i][j].x + x_cursor - FONT_SIZE * 2.5 , 
-          text_points[i][j].y + FONT_SIZE * 0.3);
+          text_points[i][j].x + x_cursor - textWidth(theText) * FONT_SIZE * 0.045, 
+          text_points[i][j].y + FONT_SIZE * 0.38);
         text_point.rotate(text_angle);
         
         starting_points_array[i].push( { 
@@ -199,9 +213,9 @@ function draw() {
           y: text_point.y + mouseY / DISPLAY_RATIO,
           alpha: text_points[i][j].alpha
         } );
-        vertex(DISPLAY_RATIO * starting_points_array[i][j].x, DISPLAY_RATIO * starting_points_array[i][j].y)
+        // vertex(DISPLAY_RATIO * starting_points_array[i][j].x, DISPLAY_RATIO * starting_points_array[i][j].y)
       }
-      endShape(CLOSE);
+      // endShape(CLOSE);
       x_cursor +=  FONT_SIZE * TEXT_SPACING * textWidth(theText[i]);
     }
   }
@@ -216,14 +230,16 @@ function draw() {
   for(const runner of runners){
     stroke(0)
     noFill();
-    strokeWeight(1)
+    strokeWeight(3)
+    // noStroke()
+    // fill(0)
     if(runner.live) runner.step();
   }
   
   for(const flower of flowers){
     noFill();
-    stroke(0,255,255);
-    strokeWeight(2);
+    stroke("darkred");
+    strokeWeight(5);
     flower.drawFlower();
   }
 
@@ -294,8 +310,6 @@ function keyPressed(){
 
     sections[0].embroider();
     while(sections.some(s => !s.embroidered)){
-      // sections.find(s => !s.embroidered).embroider();
-
       const dist_array = sections
         .filter(s => !s.embroidered)
         .map(s => s.pos.dist(tendril_coords[tendril_coords.length-1]));
@@ -307,14 +321,32 @@ function keyPressed(){
 
     tendril_coords.push("STOP")
 
-    for(flower of flowers){
-      tendril_coords = tendril_coords.concat(flower.steps)
+    flowers[0].embroider();
+    while(flowers.some(f => !f.embroidered)){
+      const dist_array = flowers
+        .filter(f => !f.embroidered)
+        .map(f => f.origin.dist(tendril_coords[tendril_coords.length-1]));
+      const next_dist = Math.min( ...dist_array );
+      flowers.find(f => !f.embroidered && f.origin.dist(tendril_coords[tendril_coords.length-1]) <= next_dist).embroider();
     }
 
     let timecode = Date.now()-1749200000000;
-    let params = `let INTERSECTION_PENALTY = ${INTERSECTION_PENALTY};\nlet SUSTENANCE_LEVEL = ${SUSTENANCE_LEVEL}; // amount of nutrients a tendril needs to break even\nlet THICKNESS_MODIFIER = ${THICKNESS_MODIFIER}; // multiply by nutrient surplus to get difference in thickness\nlet MINIMUM_THICKNESS = ${MINIMUM_THICKNESS};let START_THICKNESS = 18;\nlet MINIMUM_THICKNESS = ${MINIMUM_THICKNESS};\nlet MAX_CONVERGE_DISTANCE = ${MAX_CONVERGE_DISTANCE};\n\nlet MINIMUM_NUTRIENTS = ${MINIMUM_NUTRIENTS} // if theres nothing above this try to converge. remember its linked to amount of scan steps\nconst DIVERGENCE_MINIMUM_THICKNESS = ${DIVERGENCE_MINIMUM_THICKNESS};\nconst DIVERGENCE_MINIMUM_NUTRIENTS = ${DIVERGENCE_MINIMUM_NUTRIENTS};\n\nlet SECTIONS_PER_FLOWER = ${SECTIONS_PER_FLOWER};\nlet FLOWER_SIZE_RATIO = ${FLOWER_SIZE_RATIO};\n\nlet NOISE_OCTAVES = ${NOISE_OCTAVES};\nlet NOISE_FALLOFF = ${NOISE_FALLOFF};\nlet NOISE_SCALE = ${NOISE_SCALE};`;
-    save([params], `tendrils_params_${timecode}.txt`)
-    dst.export(tendril_coords,`tendrils_ddw_${timecode}`)
+    let params = `let INTERSECTION_PENALTY = ${INTERSECTION_PENALTY};
+    let SUSTENANCE_LEVEL = ${SUSTENANCE_LEVEL}; // amount of nutrients a tendril needs to break even
+    let THICKNESS_MODIFIER = ${THICKNESS_MODIFIER}; // multiply by nutrient surplus to get difference in thickness
+    let MINIMUM_THICKNESS = ${MINIMUM_THICKNESS};
+    let START_THICKNESS = ${START_THICKNESS};
+    let MAX_CONVERGE_DISTANCE = ${MAX_CONVERGE_DISTANCE};
+    let MINIMUM_NUTRIENTS = ${MINIMUM_NUTRIENTS} // if theres nothing above this try to converge. remember its linked to amount of scan steps
+    const DIVERGENCE_MINIMUM_THICKNESS = ${DIVERGENCE_MINIMUM_THICKNESS};
+    const DIVERGENCE_MINIMUM_NUTRIENTS = ${DIVERGENCE_MINIMUM_NUTRIENTS};
+    let SECTIONS_PER_FLOWER = ${SECTIONS_PER_FLOWER};
+    let FLOWER_SIZE_RATIO = ${FLOWER_SIZE_RATIO};
+    let NOISE_OCTAVES = ${NOISE_OCTAVES};
+    let NOISE_FALLOFF = ${NOISE_FALLOFF};
+    let NOISE_SCALE = ${NOISE_SCALE};`;
+    save([params], `otu_${timecode}.txt`)
+    dst.export(tendril_coords,`otu_${timecode}`)
   }
   if(key === 'r' || key === 'R'){
     print(runners)

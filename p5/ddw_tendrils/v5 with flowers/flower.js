@@ -57,6 +57,8 @@ class Flower {
     this.flowerComplete = false;
 
     this.rotation = rotation;
+
+    this.embroidered = false;
     
   }
   
@@ -239,6 +241,11 @@ class Flower {
       }
       endShape();
     
+  }
+
+  embroider(){
+    tendril_coords = tendril_coords.concat(this.steps);
+    this.embroidered = true;
   }
   
   

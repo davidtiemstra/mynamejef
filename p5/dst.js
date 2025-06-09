@@ -145,7 +145,6 @@ class dst{
 
             // dit is niet oke we moeten dit niet doen.
             if(stitch == "STOP"){
-                print(stitch)
                 let bits = "000000000000000011000011";
                 let bytes = new Uint8Array(3);
                 bytes.set([
@@ -161,10 +160,11 @@ class dst{
                 stitchdata = dst.concatBytes(stitchdata, dst.encodeStitch(stitch, false));
             }
             else{
-                let jumps = ceil( max(abs(stitch[0]), abs(stitch[1])) / 121)
-                jumpcount += jumps
+                // i think for very big jumps its getting misaligned somehow. not sure why.
+                let jumps = ceil( max(abs(stitch[0]), abs(stitch[1])) / 121);
+                jumpcount += jumps;
                 for(let j=0; j<jumps; j++){
-                    stitchdata = dst.concatBytes( stitchdata, dst.encodeStitch( [ floor(stitch[0]/jumps), floor(stitch[1]/jumps) ], true));
+                    stitchdata = dst.concatBytes( stitchdata, dst.encodeStitch( [ Math.sign(stitch[0]) * floor(abs(stitch[0])/jumps), Math.sign(stitch[1]) * floor(abs(stitch[1])/jumps) ], true));
                 }
                 stitchdata = dst.concatBytes(stitchdata, dst.encodeStitch( [ stitch[0]%jumps, stitch[1]%jumps ], false));
             }

@@ -150,7 +150,7 @@ class runner {
     }
 
     // grow a flower
-    if(this.last_sections.length > 0 && (flowers.length + 10) * SECTIONS_PER_FLOWER < sections.length && random() > 0.95){
+    if(this.last_sections.length > 0 && (flowers.length + FLOWER_START_OFFSET) * SECTIONS_PER_FLOWER < sections.length && random() > 0.95){
         //check surrounding thicknesses
         let depth = 0;
         let checking_section = sections[this.last_sections[0]];
@@ -167,7 +167,7 @@ class runner {
         const flower = new Flower(
             this.pos.x,  // x
             this.pos.y,  // y
-            total_thickness*FLOWER_SIZE_RATIO/15,  // radius
+            max(total_thickness*FLOWER_SIZE_RATIO/15, 30),  // radius
             petal_count,  // petal count
             FLOWER_ITERATION_OFFSET,  // iteration offset
             flower_profile, // unit profile
@@ -321,33 +321,33 @@ class runner {
 
         // --------- vvv CONVERGENCE DEBUGGING LINES vvv ----------
 
-        fill("green")
-        noStroke();
-        text(this.id, 
-            DISPLAY_RATIO * check_pos.x, 
-            DISPLAY_RATIO * check_pos.y)
+        // fill("green")
+        // noStroke();
+        // text(this.id, 
+        //     DISPLAY_RATIO * check_pos.x, 
+        //     DISPLAY_RATIO * check_pos.y)
 
-        noFill()
-        stroke("green")
+        // noFill()
+        // stroke("green")
 
-        beginShape();
-        for(const pos of this.converge_path){
-            vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
-        }
-        endShape()
+        // beginShape();
+        // for(const pos of this.converge_path){
+        //     vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
+        // }
+        // endShape()
 
-        beginShape();
-        for(const pos of partner.converge_path){
-            vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
-        }
-        endShape()
+        // beginShape();
+        // for(const pos of partner.converge_path){
+        //     vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
+        // }
+        // endShape()
 
-        const pdir = p5.Vector.add(check_pos, p5.Vector.fromAngle(avg_dir, 10))
-        line(
-            DISPLAY_RATIO * pdir.x, 
-            DISPLAY_RATIO * pdir.y, 
-            DISPLAY_RATIO * check_pos.x, 
-            DISPLAY_RATIO * check_pos.y)
+        // const pdir = p5.Vector.add(check_pos, p5.Vector.fromAngle(avg_dir, 10))
+        // line(
+        //     DISPLAY_RATIO * pdir.x, 
+        //     DISPLAY_RATIO * pdir.y, 
+        //     DISPLAY_RATIO * check_pos.x, 
+        //     DISPLAY_RATIO * check_pos.y)
 
 
         // --------- ^^^ CONVERGENCE DEBUGGING LINES ^^^ ----------
@@ -428,9 +428,9 @@ class runner {
     runners[runners.length - 2 + Math.round(thickness_ratio)].last_sections = [this.last_sections[0]]
 
     print('divergin')
-    fill("red")
-    circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
-    noFill();
+    // fill("red")
+    // circle(DISPLAY_RATIO*this.pos.x,DISPLAY_RATIO*this.pos.y,5)
+    // noFill();
   }
 
 

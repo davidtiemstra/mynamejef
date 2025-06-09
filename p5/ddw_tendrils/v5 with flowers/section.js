@@ -14,7 +14,30 @@ class section{
             return;
         }
 
-        const pp = sections[this.previous]?.p1;        
+        // const pp0 = sections[this.previous]?.p0;
+        // const pp1 = sections[this.previous]?.p1;
+        // if(pp0 && pp1){
+        //     beginShape()
+        //     vertex(
+        //         DISPLAY_RATIO * pp0.x,
+        //         DISPLAY_RATIO * pp0.y
+        //     )
+        //     vertex(
+        //         DISPLAY_RATIO * pp1.x,
+        //         DISPLAY_RATIO * pp1.y
+        //     )
+        //     vertex(
+        //         DISPLAY_RATIO * this.p1.x,
+        //         DISPLAY_RATIO * this.p1.y
+        //     )
+        //     vertex(
+        //         DISPLAY_RATIO * this.p0.x,
+        //         DISPLAY_RATIO * this.p0.y
+        //     )
+        //     endShape(CLOSE)
+        // }     
+
+        const pp = sections[this.previous]?.p1;
         if(pp) line(
             DISPLAY_RATIO * pp.x,
             DISPLAY_RATIO * pp.y,
@@ -44,10 +67,10 @@ class section{
         tendril_coords.push(this.p0);
         tendril_coords.push(this.p1);
 
-        fill("red"); push(); scale(DISPLAY_RATIO);
-        circle(tendril_coords[tendril_coords.length-2].x,tendril_coords[tendril_coords.length-2].y,3)
-        circle(tendril_coords[tendril_coords.length-1].x,tendril_coords[tendril_coords.length-1].y,3)
-        pop();
+        // fill("red"); push(); scale(DISPLAY_RATIO);
+        // circle(tendril_coords[tendril_coords.length-2].x,tendril_coords[tendril_coords.length-2].y,3)
+        // circle(tendril_coords[tendril_coords.length-1].x,tendril_coords[tendril_coords.length-1].y,3)
+        // pop();
 
         this.embroidered = true;
 
