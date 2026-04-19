@@ -11,8 +11,9 @@ planning volgende stappen:
 		- [ ] stof blend compositie
 	- tendrils
 		- [ ] betrouwbaardere generatie
+		- [ ] andere bloem inputs
 		- [ ] gebruik foto als nutrient map
-		- [ ] use fabric composition als input (thx sander)
+			- process foto
 		- [ ] ~~copy genomes~~ -> latere iteratie
 - **interface maken**
 	- [ ] web hosten

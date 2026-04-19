@@ -145,7 +145,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "delft maker faire planning per week.md",
+                "file": "delft maker faire planning per onderwerp.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -155,7 +155,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for delft maker faire planning per week"
+              "title": "Backlinks for delft maker faire planning per onderwerp"
             }
           },
           {
@@ -164,12 +164,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "delft maker faire planning per week.md",
+                "file": "delft maker faire planning per onderwerp.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from delft maker faire planning per week"
+              "title": "Outgoing links from delft maker faire planning per onderwerp"
             }
           },
           {
@@ -207,13 +207,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "delft maker faire planning per week.md",
+                "file": "delft maker faire planning per onderwerp.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of delft maker faire planning per week"
+              "title": "Outline of delft maker faire planning per onderwerp"
             }
           }
         ]
@@ -234,10 +234,10 @@
       "bases:Create new base": false
     }
   },
-  "active": "7d21a7c211117104",
+  "active": "8b47bc33608773d8",
   "lastOpenFiles": [
-    "delft maker faire planning per onderwerp.md",
     "delft maker faire planning per week.md",
+    "delft maker faire planning per onderwerp.md",
     "delft maker faire application.md"
   ]
 }

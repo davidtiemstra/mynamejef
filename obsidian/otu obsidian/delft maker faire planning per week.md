@@ -9,7 +9,9 @@
 		- [ ] stof blend compositie
 	- tendrils
 		- [ ] betrouwbaardere generatie
+		- [ ] andere bloem inputs
 		- [ ] gebruik foto als nutrient map
+			- process foto
 
 - materiaal inslaan -> bestel online
 	- [ ] garen kleuren
