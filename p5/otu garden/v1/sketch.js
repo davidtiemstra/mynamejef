@@ -1,29 +1,19 @@
 /*
-todo/versions:
-[x] get the convergence running 
-  [x] add basic step functionality
-  [x] get it running for 2 random points.
-  [x] let them just continue in a straight spike afterwards
-  [x] test & tweak -> thickness
-[x] high priority fixes
-  [ ] the fucking dst export misalignment (its not failing now so like fucking whatever?)
-  [x] make the tendrils avoid eachother/text -> or just die if they cant go anywhere
-  [x] also the tendrils pointing inward idk what to do about them. improve point in polygon check?
-  [x] if the individual tendrils are good but the convergers are fucking up the text, make those not converge and just die
-[x] do the same thing but with text points
-  [x] try embroidering different fonts
-  [x] test & tweak -> font choice, vertex interpolation (if necessary)
-[x] implement scanning
-  [x] from this phase on i dont think i need to do a lot of test runs
-[x] implement divergence
-[x] make it slightly interactive (placing the text)
-[x] clean all the bullshit on screen rn? (after checking if field convergence is ok)
-[x] tendrils get caught in straight lines
-[x] tendrils still jump all over the place. looks sloppy af
+delft maker faire changes:
+[ ] photo nutrient map
+  [ ] allow photo upload
+  [ ] process photo into nutrient map
+  [ ] apply nutrient map to tendril algo
+[ ] streamline ui to make this whole flow work better
+[ ] flower inputs
+  [ ] intialize flower parameters
+  [ ] pass flower parameters when passing flower
+
+old todo/versions:
+[?] the fucking dst export misalignment (its not failing now so like fucking whatever?)
 [ ] do hella parameter tweaks. 
     id like to get it more angular again actually that was sick. 
     give a preference for straight angles or smth
-[x] save good parameter combinations
 [?] give them a little point when they die so its more like tendrils and less like wormse
 [ ] make it not constantly diverge and immediately converge again
 [ ] make it converge more in the wild
@@ -119,6 +109,12 @@ function setup() {
   noiseSeed(noise_seed);
   randomSeed(noise_seed);
   noiseDetail(NOISE_OCTAVES, NOISE_FALLOFF);
+
+  //PROCESS PHOTO INTO NUTRIENT MAP
+  // how the fuck i even do this should.
+  // maybe it shouldnt auto detect the corners u just drag it and it distorts it.
+  // otherwise i need to find 4 corner image things that it can reliably detect, get the coords. fuck that
+  // photo processing is now done in a separate sketch. ill combine later.
 
 
   petal_count = 2 + round(random()*MAX_PETAL_COUNT);
