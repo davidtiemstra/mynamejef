@@ -7,6 +7,7 @@ delft maker faire changes:
 [ ] switch big and small hoop
 [ ] streamline ui to make this whole flow work better
 [ ] flower inputs
+  [ ] fabric parameter input boxes
   [ ] intialize flower parameters
   [ ] pass flower parameters when passing flower
 [ ] TWEAK EVERYTHINGGGGG
@@ -25,6 +26,15 @@ old todo/versions:
 
 
 // IVE MADE ALL PARAMETERS THAT I THINK ARE FUN TO TWEAK LETS INSTEAD OF CONSTS
+const PHASES = {
+  0: "set_params", // display upload button and input boxes for fabric parameters and hoop size
+  1: "crop_photo", // show crop canvas from process_photo_module
+  2: "place_logo", // move and rotate the logo (old initial phase)
+  3: "run_generation", // generation is running.
+  4: "generation_end" // generation reached equilibrium or ended manually, download .dst
+}
+
+let current_phase = 0;
 
 // photo interface stuff
 const PHOTO_NUMBER = 3;
@@ -93,7 +103,7 @@ let flower_attraction;
 let theFont;
 let text_angle = 0;
 
-let photo_input;
+let processed_photo;
 let lowest_pixel = 255, highest_pixel = 0;
 let invert_pixels = false;
 let render_map;
@@ -114,23 +124,22 @@ let hoop = HOOP[HOOP_SIZE];
 
 function preload() {
   theFont = loadFont(`../fonts/${FONT_FILENAME}`)
-  photo_input = loadImage(`photos/${PHOTO_NUMBER}_processed.jpg`)
+  processed_photo = loadImage(`photos/${PHOTO_NUMBER}_processed.jpg`)
 }
 
 function setup() {
+  // here i want to call setup_photo_module(w, h) eventually but for now im still tweaking parameters so ill leave it
+  setup_generator();
+}
+
+function setup_generator() {
   const noise_seed = round(random()*10000);
   print(`seed: ${noise_seed}`);
   noiseSeed(noise_seed);
   randomSeed(noise_seed);
   noiseDetail(NOISE_OCTAVES, NOISE_FALLOFF);
 
-  //PROCESS PHOTO INTO NUTRIENT MAP
-  // how the fuck i even do this should.
-  // maybe it shouldnt auto detect the corners u just drag it and it distorts it.
-  // otherwise i need to find 4 corner image things that it can reliably detect, get the coords. fuck that
-  // photo processing is now done in a separate sketch. ill combine later.
-
-  photo_input.loadPixels()
+  processed_photo.loadPixels()
 
   petal_count = 2 + round(random()*MAX_PETAL_COUNT);
   // petal_count = 4;
@@ -161,7 +170,7 @@ function setup() {
   let bright_pixels = 0;
   for(let x=0; x<width; x++){
     for( let y=0; y<height; y++){
-      let val = photo_input.get(floor(x),floor(y))[0];
+      let val = processed_photo.get(floor(x),floor(y))[0];
       lowest_pixel = min(val, lowest_pixel)
       highest_pixel = max(val, highest_pixel)
       bright_pixels += val > 127
@@ -419,7 +428,7 @@ function sample_nutrient_map(coord){
   if(coord.y < NUTRIENT_BORDER)          falloff = min(falloff, falloff * (coord.y * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS));
   if(coord.y > hoop.h - NUTRIENT_BORDER) falloff = min(falloff, falloff * ((coord.y - hoop.h) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS));
 
-  let photo_sample = (photo_input.get(floor(coord.x),floor(coord.y))[0] - lowest_pixel) * (255 / (highest_pixel - lowest_pixel)) / 127;
+  let photo_sample = (processed_photo.get(floor(coord.x),floor(coord.y))[0] - lowest_pixel) * (255 / (highest_pixel - lowest_pixel)) / 127;
   if(invert_pixels) photo_sample = 2.0 - photo_sample;
 
   let noise_sample = 0.1 + 0.8 * noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE)
