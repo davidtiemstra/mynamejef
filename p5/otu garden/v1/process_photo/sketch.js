@@ -43,18 +43,26 @@ function draw() {
         let shift = createVector((mouseX - pmouseX) / width, (mouseY - pmouseY) / height)
         corners[pulling_vert].add(shift);
 
-        // for(let i=0; i<4; i++){
-        //     // it would be rly nice if i can apply an offset to the other corners 
-        //     // so the aligned points stay more or less in place
-            
-        //     // i think it should be like mirrored around the point idk
-        //     // fuck ts complicated i need to draw it.
-        //     // also the adjustments are gonna like fuck with eachother sooo idk man.
+        // // i had a whole theory why this would perfectly solve displacement 
+        // // but it fucking sucks
+        // // i think maybe i could make it work by combining it with the projections and weighing it based on that? 
+        // // idk fuck thiis like so much work and its worse than the dumbass correction i started with so whatever
+        // let i = pulling_vert;
+        // let c1_old = p5.Vector.sub(corners[i], shift);
+        // let c01 = p5.Vector.sub(c1_old, corners[(i+3)%4])
+        // let hor_shift = p5.Vector.normalize(c01).mult(shift.dot(c01))
+        // let c21 = p5.Vector.sub(c1_old, corners[(i+1)%4])
+        // let ver_shift = p5.Vector.normalize(c21).mult(shift.dot(c21))
+        
+        // corners[(i+3)%4].sub(p5.Vector.mult(ver_shift, 0.2  * pow(p5.Vector.sub(corners_on_screen[(i+3)%4], corners[(i+3)%4]).mag(), 2.0)))
+        // corners[(i+1)%4].sub(p5.Vector.mult(hor_shift, 0.2  * pow(p5.Vector.sub(corners_on_screen[(i+1)%4], corners[(i+1)%4]).mag(), 2.0)))
+        // corners[(i+2)%4].sub(p5.Vector.mult(ver_shift, 0.2  * pow(p5.Vector.sub(corners_on_screen[(i+2)%4], corners[(i+2)%4]).mag(), 2.0)))
+        // corners[(i+2)%4].sub(p5.Vector.mult(hor_shift, 0.2  * pow(p5.Vector.sub(corners_on_screen[(i+2)%4], corners[(i+2)%4]).mag(), 2.0)))
 
-        //     if(i==pulling_vert) continue;
-        //     let diff = p5.Vector.sub(corners_on_screen[i],corners[pulling_vert])
-        //     corners[i].add(p5.Vector.mult(p5.Vector.mult(shift, diff), 0.1))
-        // }
+        for(let i=0; i<4; i++){
+            if(i==pulling_vert) continue;
+            corners[i].add(p5.Vector.mult(shift, -0.1))
+        }
     }
 
     photo_canvas.noStroke();

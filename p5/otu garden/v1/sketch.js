@@ -2,12 +2,14 @@
 delft maker faire changes:
 [ ] photo nutrient map
   [ ] allow photo upload
-  [ ] process photo into nutrient map
-  [ ] apply nutrient map to tendril algo
+  [x] crop photo
+  [x] apply nutrient map to tendril algo
+[ ] switch big and small hoop
 [ ] streamline ui to make this whole flow work better
 [ ] flower inputs
   [ ] intialize flower parameters
   [ ] pass flower parameters when passing flower
+[ ] TWEAK EVERYTHINGGGGG
 
 old todo/versions:
 [?] the fucking dst export misalignment (its not failing now so like fucking whatever?)
@@ -23,6 +25,11 @@ old todo/versions:
 
 
 // IVE MADE ALL PARAMETERS THAT I THINK ARE FUN TO TWEAK LETS INSTEAD OF CONSTS
+
+// photo interface stuff
+const PHOTO_NUMBER = 3;
+
+const HOOP_SIZE = "s";
 
 // tweak these to determine growth behaviour
 let INTERSECTION_PENALTY = 0.8;
@@ -42,7 +49,7 @@ const FLOWER_START_OFFSET = 10; // set to 10 for words
 
 let NOISE_OCTAVES = 8;
 let NOISE_FALLOFF = 0.25;
-let NOISE_SCALE = 0.04; //most interesting one honestly
+let NOISE_SCALE = 0.03; //most interesting one honestly
 
 const FLOWER_STEP_SIZE = 15;
 const ITERATION_COUNT = 2;
@@ -86,6 +93,11 @@ let flower_attraction;
 let theFont;
 let text_angle = 0;
 
+let photo_input;
+let lowest_pixel = 255, highest_pixel = 0;
+let invert_pixels = false;
+let render_map;
+
 // hoop sizes expressed in du ( dst units: 1du = 0.1mm)
 // these are from the manual. supposedly if we stay within that range they should read but needs testing.
 const HOOP = {
@@ -98,9 +110,11 @@ const HOOP = {
     h:1300
   }
 }
+let hoop = HOOP[HOOP_SIZE];
 
 function preload() {
   theFont = loadFont(`../fonts/${FONT_FILENAME}`)
+  photo_input = loadImage(`photos/${PHOTO_NUMBER}_processed.jpg`)
 }
 
 function setup() {
@@ -116,6 +130,7 @@ function setup() {
   // otherwise i need to find 4 corner image things that it can reliably detect, get the coords. fuck that
   // photo processing is now done in a separate sketch. ill combine later.
 
+  photo_input.loadPixels()
 
   petal_count = 2 + round(random()*MAX_PETAL_COUNT);
   // petal_count = 4;
@@ -128,29 +143,45 @@ function setup() {
   );
 
   createCanvas( 
-    ceil(DISPLAY_RATIO * HOOP.l.w), 
-    ceil(DISPLAY_RATIO * HOOP.l.h) 
+    ceil(DISPLAY_RATIO * hoop.w), 
+    ceil(DISPLAY_RATIO * hoop.h) 
   );
 
   // fill section index for performance.
-  for(let x=0; x < HOOP.l.w; x += IX_HALF_SQUARE_SIZE){
+  for(let x=0; x < hoop.w; x += IX_HALF_SQUARE_SIZE){
     ix_sections.push([]);
-    for(let y=0; y < HOOP.l.h; y += IX_HALF_SQUARE_SIZE){
+    for(let y=0; y < hoop.h; y += IX_HALF_SQUARE_SIZE){
       ix_sections[ix_sections.length-1].push([]);
       // so the domain of each square is:
       // index * half square size -> index * half square size + full square size
     }
   }
 
-  // // -----------ANNOYING DRAWING NOISE CODE------------------
-  // for (let y = 0; y < HOOP.l.h; y += 2) {
-  //   for (let x = 0; x < HOOP.l.w; x += 2) {
-  //     let c = 255 * noise(NOISE_SCALE * x, NOISE_SCALE * y);
-  //     stroke(c);
-  //     point(DISPLAY_RATIO * x, DISPLAY_RATIO * y);
-  //   }
-  // }
-  // // -----------ANNOYING DRAWING NOISE CODE------------------
+  // -----------TWEAK IMAGE RENDERING------------------
+  let bright_pixels = 0;
+  for(let x=0; x<width; x++){
+    for( let y=0; y<height; y++){
+      let val = photo_input.get(floor(x),floor(y))[0];
+      lowest_pixel = min(val, lowest_pixel)
+      highest_pixel = max(val, highest_pixel)
+      bright_pixels += val > 127
+    }
+  }
+  invert_pixels = bright_pixels > width * height * 0.5
+  // -----------TWEAK IMAGE RENDERING------------------
+
+  // -----------SHOW MAP SOMETIMES------------------
+  render_map = createGraphics(width,height);
+  render_map.loadPixels();
+  for(let x=0; x<width; x++){
+    for( let y=0; y<height; y++){
+      let val = sample_nutrient_map(createVector(x,y)) * 255
+      // stroke(200)
+      render_map.set(x,y,val)
+    }
+  }
+  render_map.updatePixels();
+  // -----------SHOW MAP SOMETIMES------------------
 
 
   angleMode(RADIANS);
@@ -166,9 +197,9 @@ function setup() {
 }
 
 function draw() {
-
   if(runners.length==0){
     background(255)
+    image(render_map,0,0,width,height)
     strokeWeight(3)
     rect(0,0,width,height)
     strokeWeight(1)
@@ -224,7 +255,7 @@ function draw() {
   }
   
   for(const runner of runners){
-    stroke(0)
+    stroke("darkgreen")
     noFill();
     strokeWeight(3)
     // noStroke()
@@ -252,6 +283,7 @@ function mouseClicked(){
 
   background(255)
   rect(0,0,width,height)
+  image(render_map,0,0,width,height)
 
   print(`mouse clicked at X:${mouseX}, Y:${mouseY}`)
 
@@ -313,7 +345,7 @@ function keyPressed(){
       sections.find(s => !s.embroidered && s.pos.dist(tendril_coords[tendril_coords.length-1]) <= next_dist).embroider();
     }
 
-    tendril_coords = tendril_coords.filter(c => c.x > 0 && c.x < HOOP.l.w && c.y > 0 && c.y < HOOP.l.h );
+    tendril_coords = tendril_coords.filter(c => c.x > 0 && c.x < hoop.w && c.y > 0 && c.y < hoop.h );
 
     tendril_coords.push("STOP")
 
@@ -368,7 +400,7 @@ function keyPressed(){
 
 
 function sample_nutrient_map(coord){
-  if(coord.x < 0 || coord.x > HOOP.l.w || coord.y < 0 || coord.y > HOOP.l.h) {
+  if(coord.x < 0 || coord.x > hoop.w || coord.y < 0 || coord.y > hoop.h) {
     return -200;
   }
 
@@ -380,15 +412,19 @@ function sample_nutrient_map(coord){
     }
   }
 
-  // falloff should be harsher.
+  // falloff should be harsher. fsr it was making the corners (where the overlap) all white. doesnt make any fucking sense. but thats why the min() are there
   let falloff = 1;
-  if(coord.x < NUTRIENT_BORDER)            falloff *= coord.x * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS;
-  if(coord.x > HOOP.l.w - NUTRIENT_BORDER) falloff *= (coord.x - HOOP.l.w) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS;
-  if(coord.y < NUTRIENT_BORDER)            falloff *= coord.y * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS;
-  if(coord.y > HOOP.l.h - NUTRIENT_BORDER) falloff *= (coord.y - HOOP.l.h) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS;
+  if(coord.x < NUTRIENT_BORDER)          falloff *= coord.x * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS;
+  if(coord.x > hoop.w - NUTRIENT_BORDER) falloff = min(falloff, falloff * ((coord.x - hoop.w) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS));
+  if(coord.y < NUTRIENT_BORDER)          falloff = min(falloff, falloff * (coord.y * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS));
+  if(coord.y > hoop.h - NUTRIENT_BORDER) falloff = min(falloff, falloff * ((coord.y - hoop.h) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS));
 
-  
-  return noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE) * falloff ;
+  let photo_sample = (photo_input.get(floor(coord.x),floor(coord.y))[0] - lowest_pixel) * (255 / (highest_pixel - lowest_pixel)) / 127;
+  if(invert_pixels) photo_sample = 2.0 - photo_sample;
+
+  let noise_sample = 0.1 + 0.8 * noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE)
+
+  return noise_sample * falloff * photo_sample;
 }
 
 // STOLEN HELPER SHIT
