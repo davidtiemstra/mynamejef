@@ -2,7 +2,7 @@
 // it works more or less like the previous one. you first generate dna with the static function 'generateUnitDNA()'
 // this is the per plant flower dna to keep consistency between flowers in one plant
 // then you create a flower like before and pass it the dna (as well as x,y, ,radius, rotation and petal count)
-// path is stored in this.steps, outlines ar stored in this.outlineSteps
+// path is stored in this.steps, outlines ar stored in this.polygons
 // density of the spiral fill is controlled by spiralSpacing
 
 // flower shapes are changed by manipulating dna. (spine and edge are fun to mess with)
@@ -42,7 +42,9 @@ class Flower {
     this.petalCount = petalCount;
     this.baseDNA = dna;
     this.steps = [];
-    this.outlineSteps = []; // Store relative steps for the outline
+    
+    // Array of isolated, closed paths for Point-in-Polygon calculations
+    this.polygons = []; 
 
     this.generatePath();
   }
@@ -80,6 +82,12 @@ class Flower {
       let extra = sin(aa * (coreLobes + 1) * 1.3 + corePhase * 1.7) * coreLobeAmt * 0.4;
       return coreBaseR * (1 + lobe + extra);
     };
+
+    // --- Generate Core Polygon ---
+    let coreWp = [];
+    this.addCoreArc(coreWp, coreR, 0, TWO_PI);
+    coreWp.push({ x: coreWp[0].x, y: coreWp[0].y }); // Close the loop
+    this.polygons.push(this.walkPath(coreWp, FLOWER_STEP_SIZE)); // Save as separate polygon
 
     let petalAngles = [];
     for (let i = 0; i < this.petalCount; i++) {
@@ -120,7 +128,6 @@ class Flower {
     }
 
     let waypoints = [];
-    let outlineWp = []; // Parallel array to store purely the outer perimeter
     let stalkTopA = HALF_PI + random(-0.2, 0.2) + this.rotation;
     let curArcA = stalkTopA;
 
@@ -129,36 +136,31 @@ class Flower {
       let entryA = spec.angle - spec.coreHalfWidth;
       let exitA = spec.angle + spec.coreHalfWidth;
       
-      // Build core arcs for both main path and outline
       this.addCoreArc(waypoints, coreR, curArcA, entryA);
-      this.addCoreArc(outlineWp, coreR, curArcA, entryA);
 
       let entry = { x: cos(entryA) * coreR(entryA), y: sin(entryA) * coreR(entryA) };
       let exit = { x: cos(exitA) * coreR(exitA), y: sin(exitA) * coreR(exitA) };
       
-      // Generate both the complex interior spiral and the perimeter outline
-      this.addPetal(waypoints, outlineWp, entry, exit, spec.angle, spec);
+      this.addPetal(waypoints, entry, exit, spec.angle, spec);
       curArcA = exitA;
     }
     
     this.addCoreArc(waypoints, coreR, curArcA, stalkTopA + TWO_PI);
-    this.addCoreArc(outlineWp, coreR, curArcA, stalkTopA + TWO_PI);
 
     let prevWp = waypoints[waypoints.length - 1];
-    let prevOutWp = outlineWp[outlineWp.length - 1];
     for (let s = 1; s <= 5; s++) {
       let t = s / 5;
       waypoints.push({ x: lerp(prevWp.x, 0, t), y: lerp(prevWp.y, 0, t) }); 
-      outlineWp.push({ x: lerp(prevOutWp.x, 0, t), y: lerp(prevOutWp.y, 0, t) }); 
     }
 
-    // Process drift/noise on both paths
     this.steps = this.walkPath(waypoints, FLOWER_STEP_SIZE);
-    this.outlineSteps = this.walkPath(outlineWp, FLOWER_STEP_SIZE);
   }
 
+  // =====================================================================
+  // UNIFIED PETAL & UTILITY METHODS
+  // =====================================================================
 
-  addPetal(wp, outlineWp, entry, exit, centerA, spec) {
+  addPetal(wp, entry, exit, centerA, spec) {
     let originX = (entry.x + exit.x) * 0.5;
     let originY = (entry.y + exit.y) * 0.5;
 
@@ -193,7 +195,7 @@ class Flower {
       if (w > trueMaxW) trueMaxW = w;
     }
 
-    // --- GENERATE PERIMETER OUTLINE ---
+    // --- GENERATE ISOLATED PETAL POLYGON ---
     let leftEdge = [];
     let rightEdge = [];
     for (let i = 0; i < n; i++) {
@@ -206,16 +208,23 @@ class Flower {
       rightEdge.push({ x: s.x - cos(perpA) * wR, y: s.y - sin(perpA) * wR });
     }
 
-    this.rampToPoint(outlineWp, entry, leftEdge[0], 3);
-    for (let p of leftEdge) outlineWp.push(p);
+    let petalPolyWp = [];
+    this.rampToPoint(petalPolyWp, entry, leftEdge[0], 3);
+    for (let p of leftEdge) petalPolyWp.push(p);
 
     let tipPt = spine[n - 1];
-    if (spec.tipCurl > 0.2) this.addTipCurl(outlineWp, tipPt, tipPt.heading, spec);
+    if (spec.tipCurl > 0.2) this.addTipCurl(petalPolyWp, tipPt, tipPt.heading, spec);
 
-    for (let i = rightEdge.length - 1; i >= 0; i--) outlineWp.push(rightEdge[i]);
-    this.rampToPoint(outlineWp, rightEdge[0], exit, 3);
+    for (let i = rightEdge.length - 1; i >= 0; i--) petalPolyWp.push(rightEdge[i]);
+    this.rampToPoint(petalPolyWp, rightEdge[0], exit, 3);
+    
+    // Connect the exit back to the entry to explicitly close the boundary
+    petalPolyWp.push({ x: entry.x, y: entry.y });
+    
+    // Save this petal as a distinct polygon
+    this.polygons.push(this.walkPath(petalPolyWp, FLOWER_STEP_SIZE));
 
-    // --- GENERATE SPIRAL FILL ---
+    // --- GENERATE CONTINUOUS SPIRAL FILL ---
     let passes = Math.ceil(trueMaxW / (spiralSpacing / 2));
     passes = Math.max(2, passes);
     if (passes % 2 !== 0) passes++; 
