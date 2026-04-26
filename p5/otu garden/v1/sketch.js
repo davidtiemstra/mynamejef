@@ -1,18 +1,17 @@
 /*
 delft maker faire changes:
-[ ] photo nutrient map
-  [ ] allow photo upload - choose between cropped and uncropped (to skip cropping phase)
+[x] photo nutrient map
+  [x] allow photo upload - choose between cropped and uncropped (to skip cropping phase)
   [x] crop photo
   [x] apply nutrient map to tendril algo
-[ ] switch big and small hoop
+[x] switch big and small hoop
 [ ] streamline ui to make this whole flow work better
 [ ] flower inputs
   [ ] fabric parameter input boxes
   [ ] intialize flower parameters
-  [ ] pass flower parameters when passing flower
-[ ] TWEAK EVERYTHINGGGGG
-  - scan / growth isnt working correctly. theyre not dying very fast on black sections, and barely growing on light ones.
-  - do i want to keep convergence....?
+  [ ] pass flower parameters when instantiating flower
+[ ] tweak generation parameters
+[ ] make it pretty
 
 old todo/versions:
 [?] the fucking dst export misalignment (its not failing now so like fucking whatever?)
@@ -41,7 +40,7 @@ let current_phase = 0;
 // photo interface stuff
 const DEBUG_PHOTO_NUMBER = 3;
 const WEIGHED_CONTRAST = false; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
-const HOOP_SIZE = "s";
+const hoop_size = "s";
 const DEBUG_COLORS = true;
 const SHOW_RENDER_MAP = false;
 
@@ -146,7 +145,7 @@ function setup_generator() {
   randomSeed(noise_seed);
   noiseDetail(NOISE_OCTAVES, NOISE_FALLOFF);
 
-  hoop = HOOP[HOOP_SIZE];
+  hoop = HOOP[hoop_size];
 
   processed_photo.loadPixels()
 
