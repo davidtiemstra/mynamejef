@@ -233,14 +233,12 @@ class Flower {
   }
 
   drawFlower(){
-      
-      beginShape();
-      for(let s of this.steps){
-        vertex(s.x * DISPLAY_RATIO, s.y * DISPLAY_RATIO)
+    beginShape();
+    for(let s of this.steps){
+      vertex(s.x * DISPLAY_RATIO, s.y * DISPLAY_RATIO)
 
-      }
-      endShape();
-    
+    }
+    endShape();
   }
 
   embroider(){

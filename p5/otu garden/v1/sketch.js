@@ -8,22 +8,19 @@ delft maker faire changes:
 [x] streamline ui to make this whole flow work better
 [x] embroider title in flower color.
 [ ] flower inputs
-  [ ] fabric parameter input boxes
-  [ ] intialize flower parameters
+  [x] fabric parameter input boxes
+  [x] use new flower class
+  [ ] intialize flower parameters using fabric
+  [ ] pass variable petal count (based on what?)
   [ ] pass flower parameters when instantiating flower
+[ ] purge tendril sections that are covered by flowers from dst export
 [ ] tweak generation parameters
-[ ] make it pretty
+[ ] make the ui pretty
 
 old todo/versions:
 [?] the fucking dst export misalignment (its not failing now so like fucking whatever?)
-[ ] do hella parameter tweaks. 
-    id like to get it more angular again actually that was sick. 
-    give a preference for straight angles or smth
-[?] give them a little point when they die so its more like tendrils and less like wormse
-[ ] make it not constantly diverge and immediately converge again
-[ ] make it converge more in the wild
-[-] implement flowers
-
+[?] give them a little point when they die so its more like tendrils and less like worms
+  - idk how i feel about the little point actually maybe theres a better way to do it.
 */
 
 
@@ -124,7 +121,7 @@ let flowers = [];
 let tendril_coords = [];
 let starting_points_array = [];
 const text_points = [];
-let flower_profile;
+let flower_dna;
 let petal_count;
 let flower_attraction;
 
@@ -206,10 +203,7 @@ function setup_generator_module() {
   flower_attraction = 100 + random() * 100000
   // flower_attraction = 1000;
   
-  flower_profile = Flower.generateUnitProfile(
-      int(random(1,15)),  // profile points
-      0.8  // max width (normalised relative to radius)
-  );
+  flower_dna = Flower.generateUnitDNA();
 
   createCanvas( 
     ceil(DISPLAY_RATIO * hoop.w), 
@@ -466,12 +460,13 @@ function keyPressed(){
     if(FILL_TEXT) tendril_coords = tendril_coords.concat(fill_coords)
 
     flowers[0].embroider();
+    print(flowers)
     while(flowers.some(f => !f.embroidered)){
       const dist_array = flowers
         .filter(f => !f.embroidered)
-        .map(f => f.origin.dist(tendril_coords[tendril_coords.length-1]));
+        .map(f => f.steps[0].dist(tendril_coords[tendril_coords.length-1]));
       const next_dist = Math.min( ...dist_array );
-      flowers.find(f => !f.embroidered && f.origin.dist(tendril_coords[tendril_coords.length-1]) <= next_dist).embroider();
+      flowers.find(f => !f.embroidered && f.steps[0].dist(tendril_coords[tendril_coords.length-1]) <= next_dist).embroider();
     }
 
     let timecode = Date.now()-1749200000000;

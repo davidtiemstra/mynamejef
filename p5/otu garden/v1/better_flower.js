@@ -47,6 +47,8 @@ class Flower {
     this.polygons = []; 
 
     this.generatePath();
+    
+    this.embroidered = false;
   }
 
   jitterAndScaleDNA(dna) {
@@ -154,6 +156,9 @@ class Flower {
     }
 
     this.steps = this.walkPath(waypoints, FLOWER_STEP_SIZE);
+    for(let i = 0; i< this.steps.length; i++){
+      this.steps[i] = createVector(this.cx + this.steps[i].x, this.cy + this.steps[i].y)
+    }
   }
 
   // =====================================================================
@@ -394,5 +399,19 @@ class Flower {
     let dx = wp[i + 1].x - wp[i].x;
     let dy = wp[i + 1].y - wp[i].y;
     return sqrt(dx * dx + dy * dy);
+  }
+  
+  drawFlower(){
+    beginShape();
+    for(let s of this.steps){
+      vertex(s.x * DISPLAY_RATIO, s.y * DISPLAY_RATIO)
+
+    }
+    endShape();
+  }
+
+  embroider(){
+    tendril_coords = tendril_coords.concat(this.steps);
+    this.embroidered = true;
   }
 }

@@ -180,14 +180,9 @@ class runner {
             this.pos.x,  // x
             this.pos.y,  // y
             max(total_thickness*FLOWER_SIZE_RATIO/15, 30),  // radius
+            random()*2*PI, // rotation
             petal_count,  // petal count
-            FLOWER_ITERATION_OFFSET,  // iteration offset
-            flower_profile, // unit profile
-            random()*2*PI
-        );
-        flower.generateFlower(flower_attraction,  // attraction
-            random()  // noise size
-            // 0.2  // noise size
+            flower_dna, // unit profile
         );
         flowers.push(flower);
 
