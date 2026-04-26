@@ -6,6 +6,7 @@ class runner {
     this.pos = createVector(x,y);
     this.dir = dir;
     this.thickness = thickness;
+    this.last_consumption;
 
     this.last_sections = [];
 
@@ -29,7 +30,8 @@ class runner {
     }
 
     // scan for nutrients in a fan.
-    const max_angle = Math.atan(STEP_SIZE / this.thickness);
+    // const max_angle = Math.atan(STEP_SIZE / this.thickness);
+    const max_angle = Math.atan(0.5*this.thickness / STEP_SIZE) * MAX_ANGLE_MODIFIER;
 
     let scan_results = [];
 
@@ -78,7 +80,7 @@ class runner {
     const scan_totals = scan_results.map(s => s.nutrient_total - s.intersections * INTERSECTION_PENALTY * scan_results[0].nutrient_samples.length);
 
     // if its shit: try converging:
-    if( frameCount > 50 && this.age > 10 && !scan_totals.some(t => t > MINIMUM_NUTRIENTS)){
+    if( ALLOW_CONVERGENCE && frameCount > 50 && this.age > 10 && !scan_totals.some(t => t > MINIMUM_NUTRIENTS)){
         // print(`trying converge in the field!`)
         for(const runner of runners){
             if (runner.id != this.id && runner.live && !runner.converging && runner.pos.dist(this.pos) < MAX_CONVERGE_DISTANCE){
@@ -107,16 +109,20 @@ class runner {
         return;
     }
 
-    // otherwise just step in the best direction
-    const choice_direction = scan_results[runner.index_of_max(scan_totals)];
+    // otherwise just step in the best direction.
+    let max_index = runner.index_of_max(scan_totals)
+    let choice_direction = scan_results[max_index];
+    if(scan_totals[max_index == 0]){
+        choice_direction = scan_results[scan_results.length-1]
+    }
 
     this.dir = choice_direction.alpha;
 
     // progress thickness based on nutrients
-    const consumption = choice_direction.nutrient_samples[0] - choice_direction.intersections * INTERSECTION_PENALTY;
-    this.thickness += (consumption - SUSTENANCE_LEVEL) * THICKNESS_MODIFIER;
+    this.last_consumption = choice_direction.nutrient_samples[0] - choice_direction.intersections * INTERSECTION_PENALTY;
+    this.thickness += (this.last_consumption - SUSTENANCE_LEVEL) * THICKNESS_MODIFIER;
 
-    if(Math.abs((consumption - SUSTENANCE_LEVEL) * THICKNESS_MODIFIER) > 0.5 * this.thickness){
+    if(Math.abs((this.last_consumption - SUSTENANCE_LEVEL) * THICKNESS_MODIFIER) > 0.5 * this.thickness){
         //some fucking thing is causing massive thickness drops and its killing my tendrils
         // debugger;
         print(`im dying fast lol`)
@@ -136,7 +142,7 @@ class runner {
         //try to make a little point?
         while(this.thickness > 4){
             const coord = this.pos;
-            if(coord.x < 0 || coord.x > HOOP.l.w || coord.y < 0 || coord.y > HOOP.l.h) {
+            if(coord.x < 0 || coord.x > hoop.w || coord.y < 0 || coord.y > hoop.h) {
                 return;
             }
             sections.push(new section(this.pos.copy(), this.dir, this.thickness, this.last_sections[0] ?? null ));
@@ -192,6 +198,7 @@ class runner {
         // strokeWeight(1);
     }
 
+    if(DEBUG_COLORS) stroke(0,(this.last_consumption - SUSTENANCE_LEVEL)* 255, (SUSTENANCE_LEVEL - this.last_consumption) * 255);
     sections.push(new section(this.pos.copy(), this.dir, this.thickness, this.last_sections[0] ?? null ));
 
     let p0;
@@ -206,6 +213,8 @@ class runner {
 
   // convergence path calculation is handled by the runner that initializes the convergence.
   compute_converge(partner_id){
+    // if(!ALLOW_CONVERGENCE) return; // commented so convergence still happens at the start just not in the field
+
     const partner = runners[partner_id];
 
     //get the angle in between

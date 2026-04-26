@@ -1,7 +1,7 @@
 /*
 delft maker faire changes:
 [ ] photo nutrient map
-  [ ] allow photo upload
+  [ ] allow photo upload - choose between cropped and uncropped (to skip cropping phase)
   [x] crop photo
   [x] apply nutrient map to tendril algo
 [ ] switch big and small hoop
@@ -11,6 +11,8 @@ delft maker faire changes:
   [ ] intialize flower parameters
   [ ] pass flower parameters when passing flower
 [ ] TWEAK EVERYTHINGGGGG
+  - scan / growth isnt working correctly. theyre not dying very fast on black sections, and barely growing on light ones.
+  - do i want to keep convergence....?
 
 old todo/versions:
 [?] the fucking dst export misalignment (its not failing now so like fucking whatever?)
@@ -37,14 +39,18 @@ const PHASES = {
 let current_phase = 0;
 
 // photo interface stuff
-const PHOTO_NUMBER = 3;
-
+const DEBUG_PHOTO_NUMBER = 3;
+const WEIGHED_CONTRAST = false; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
 const HOOP_SIZE = "s";
+const DEBUG_COLORS = true;
+const SHOW_RENDER_MAP = false;
+
+const ALLOW_CONVERGENCE = false; // i think maybe convergence was a mistake. still does it at the very start. idk its hard to let go.
 
 // tweak these to determine growth behaviour
 let INTERSECTION_PENALTY = 0.8;
-let SUSTENANCE_LEVEL = 0.32; // amount of nutrients a tendril needs to break even
-let THICKNESS_MODIFIER = 0.6; // multiply by nutrient surplus to get difference in thickness
+let SUSTENANCE_LEVEL = 0.36; // amount of nutrients a tendril needs to break even
+let THICKNESS_MODIFIER = 0.8; // multiply by nutrient surplus to get difference in thickness
 let START_THICKNESS = 20;
 let MINIMUM_THICKNESS = 12;
 let MAX_CONVERGE_DISTANCE = 125;
@@ -70,7 +76,6 @@ const FLOWER_ITERATION_OFFSET = 0.05;
 // let theText = 'papu1';
 let theText = 'otu';
 const FONT_FILENAME = "Flexi_IBM_VGA_False.ttf"
-const FONT_SIZE = 324;
 const TEXT_SAMPLE_FACTOR = 0.03;
 const TEXT_SPACING = 0.09
 
@@ -82,6 +87,7 @@ const DISPLAY_RATIO = 1;
 // const DISPLAY_RATIO = 0.55; // real value for laptop screen
 
 // i can tweak these mostly to trade performance for scan resolution
+const MAX_ANGLE_MODIFIER = 0.75;
 const SCAN_ANGULAR_RESOLUTION = 0.08;
 const SCAN_RADIAL_RESOLUTION = STEP_SIZE;
 const SCAN_DISTANCE = SCAN_RADIAL_RESOLUTION * 3;
@@ -104,7 +110,6 @@ let theFont;
 let text_angle = 0;
 
 let processed_photo;
-let lowest_pixel = 255, highest_pixel = 0;
 let invert_pixels = false;
 let render_map;
 
@@ -113,18 +118,20 @@ let render_map;
 const HOOP = {
   s:{
     w: 1000,
-    h: 1000
+    h: 1000,
+    font: 256
   },
   l:{
     w:1800,
-    h:1300
+    h:1300,
+    font: 324
   }
 }
-let hoop = HOOP[HOOP_SIZE];
+let hoop;
 
 function preload() {
   theFont = loadFont(`../fonts/${FONT_FILENAME}`)
-  processed_photo = loadImage(`photos/${PHOTO_NUMBER}_processed.jpg`)
+  processed_photo = loadImage(`photos/${DEBUG_PHOTO_NUMBER}_processed.jpg`)
 }
 
 function setup() {
@@ -138,6 +145,8 @@ function setup_generator() {
   noiseSeed(noise_seed);
   randomSeed(noise_seed);
   noiseDetail(NOISE_OCTAVES, NOISE_FALLOFF);
+
+  hoop = HOOP[HOOP_SIZE];
 
   processed_photo.loadPixels()
 
@@ -167,29 +176,59 @@ function setup_generator() {
   }
 
   // -----------TWEAK IMAGE RENDERING------------------
-  let bright_pixels = 0;
-  for(let x=0; x<width; x++){
-    for( let y=0; y<height; y++){
-      let val = processed_photo.get(floor(x),floor(y))[0];
-      lowest_pixel = min(val, lowest_pixel)
-      highest_pixel = max(val, highest_pixel)
-      bright_pixels += val > 127
+  // theres a lot of things here that im doing a million times lol
+  let average = [0,0,0]
+  let lowest_pixel = [255,255,255];
+  let highest_pixel = [0,0,0];
+  for(let i=0; i<width*height*4; i+=4){
+    for(let j=0; j<3; j++){
+      average[j] += processed_photo.pixels[i+j];
+      lowest_pixel[j] = min(processed_photo.pixels[i+j], lowest_pixel[j])
+      highest_pixel[j] = max(processed_photo.pixels[i+j], highest_pixel[j])
     }
   }
-  invert_pixels = bright_pixels > width * height * 0.5
+  average = [average[0] / (width*height), average[1] / (width*height), average[2] / (width*height)]
+  
+  let contrasts = [0,0,0]
+  for(let i=0; i<width*height*4; i+=4){
+    for(let j=0; j<3; j++){
+      contrasts[j] += abs(average[j] - processed_photo.pixels[i+j]);
+      processed_photo.pixels[i+j] = (processed_photo.pixels[i+j] - lowest_pixel[j]) * 255 / (highest_pixel[j] - lowest_pixel[j])
+    }
+  }
+  const total_contrast = contrasts[0] + contrasts[1] + contrasts[2];
+  contrasts = [contrasts[0] / total_contrast, contrasts[1] / total_contrast, contrasts[2] / total_contrast];
+
+  let max_contrast_index = contrasts.indexOf(Math.max(...contrasts));
+
+  invert_pixels = WEIGHED_CONTRAST ? 
+    contrasts[0] * average[0] + contrasts[1] * average[1] +  contrasts[2] * average[2] : 
+    average[max_contrast_index] > 127;
+  
+  for(let i=0; i<width*height*4; i+=4){
+    processed_photo.pixels[i] = WEIGHED_CONTRAST ? 
+      contrasts[0] * processed_photo.pixels[i] + contrasts[1] * processed_photo.pixels[i+1] +  contrasts[2] * processed_photo.pixels[i+2] : 
+      processed_photo.pixels[i + max_contrast_index];
+  }
+  print(`lowest (r,g,b): ${lowest_pixel}`)
+  print(`highest (r,g,b): ${highest_pixel}`)
+  print(`averages (r,g,b): ${average}`)
+  print(`contrasts (r,g,b): ${contrasts}`)
   // -----------TWEAK IMAGE RENDERING------------------
 
   // -----------SHOW MAP SOMETIMES------------------
-  render_map = createGraphics(width,height);
-  render_map.loadPixels();
-  for(let x=0; x<width; x++){
-    for( let y=0; y<height; y++){
-      let val = sample_nutrient_map(createVector(x,y)) * 255
-      // stroke(200)
-      render_map.set(x,y,val)
+  if(SHOW_RENDER_MAP){
+    render_map = createGraphics(width,height);
+    render_map.loadPixels();
+    for(let x=0; x<width; x++){
+      for( let y=0; y<height; y++){
+        let val = sample_nutrient_map(createVector(x,y)) * 255
+        // stroke(200)
+        render_map.set(x,y,val)
+      }
     }
+    render_map.updatePixels();
   }
-  render_map.updatePixels();
   // -----------SHOW MAP SOMETIMES------------------
 
 
@@ -198,7 +237,7 @@ function setup_generator() {
   // get starting runners from text
   textFont(theFont);
   for(let i=0; i< theText.length; i++){
-    text_points.push(theFont.textToPoints(theText[i], 0, 0, FONT_SIZE, {
+    text_points.push(theFont.textToPoints(theText[i], 0, 0, hoop.font, {
       sampleFactor: TEXT_SAMPLE_FACTOR,  // Increase this value for higher resolution
       simplifyThreshold: 0  // You can adjust this to smooth out the points -> i think it removes colinear points which sucks
     }));
@@ -208,7 +247,8 @@ function setup_generator() {
 function draw() {
   if(runners.length==0){
     background(255)
-    image(render_map,0,0,width,height)
+    SHOW_RENDER_MAP ? image(render_map,0,0,width,height) : image(processed_photo,0,0,width,height);
+    
     strokeWeight(3)
     rect(0,0,width,height)
     strokeWeight(1)
@@ -217,7 +257,7 @@ function draw() {
     // u can view sample resultion by uncommenting beginshape/vertex/endshape below.
     noFill();
     stroke(0);
-    textSize(FONT_SIZE);
+    textSize(hoop.font);
     textAlign(CENTER, CENTER)
     push();
     translate( mouseX / DISPLAY_RATIO , mouseY / DISPLAY_RATIO)
@@ -240,8 +280,8 @@ function draw() {
 
         // also rotate text.
         let text_point = createVector(
-          text_points[i][j].x + x_cursor - textWidth(theText) * FONT_SIZE * 0.045, 
-          text_points[i][j].y + FONT_SIZE * 0.38);
+          text_points[i][j].x + x_cursor - textWidth(theText) * hoop.font * 0.045, 
+          text_points[i][j].y + hoop.font * 0.38);
         text_point.rotate(text_angle);
         
         starting_points_array[i].push( { 
@@ -252,7 +292,7 @@ function draw() {
         // vertex(DISPLAY_RATIO * starting_points_array[i][j].x, DISPLAY_RATIO * starting_points_array[i][j].y)
       }
       // endShape(CLOSE);
-      x_cursor +=  FONT_SIZE * TEXT_SPACING * textWidth(theText[i]);
+      x_cursor +=  hoop.font * TEXT_SPACING * textWidth(theText[i]);
     }
   }
 
@@ -266,16 +306,14 @@ function draw() {
   for(const runner of runners){
     stroke("darkgreen")
     noFill();
-    strokeWeight(3)
-    // noStroke()
-    // fill(0)
+    strokeWeight(2)
     if(runner.live) runner.step();
   }
   
   for(const flower of flowers){
     noFill();
     stroke("darkred");
-    strokeWeight(5);
+    strokeWeight(3);
     flower.drawFlower();
   }
 
@@ -292,7 +330,8 @@ function mouseClicked(){
 
   background(255)
   rect(0,0,width,height)
-  image(render_map,0,0,width,height)
+  SHOW_RENDER_MAP ? image(render_map,0,0,width,height) : image(processed_photo,0,0,width,height);
+  background(255,50)
 
   print(`mouse clicked at X:${mouseX}, Y:${mouseY}`)
 
@@ -428,7 +467,8 @@ function sample_nutrient_map(coord){
   if(coord.y < NUTRIENT_BORDER)          falloff = min(falloff, falloff * (coord.y * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS));
   if(coord.y > hoop.h - NUTRIENT_BORDER) falloff = min(falloff, falloff * ((coord.y - hoop.h) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS));
 
-  let photo_sample = (processed_photo.get(floor(coord.x),floor(coord.y))[0] - lowest_pixel) * (255 / (highest_pixel - lowest_pixel)) / 127;
+  let photo_sample = processed_photo.pixels[(floor(coord.x) + width * floor(coord.y))*4] / 127;
+  photo_sample = sin(photo_sample * PI * 0.5 + 1.5 * PI) + 1 // this increases contrast but maybe i dont need that actually
   if(invert_pixels) photo_sample = 2.0 - photo_sample;
 
   let noise_sample = 0.1 + 0.8 * noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE)
