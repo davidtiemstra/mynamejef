@@ -11,8 +11,8 @@ delft maker faire changes:
   [x] fabric parameter input boxes
   [x] use new flower class
   [ ] intialize flower parameters using fabric
-  [ ] pass variable petal count (based on what?)
-  [ ] pass flower parameters when instantiating flower
+  [x] pass variable petal count (based on what?)
+  [x] pass flower parameters when instantiating flower
 [ ] purge tendril sections that are covered by flowers from dst export
 [ ] tweak generation parameters
 [ ] make the ui pretty
@@ -69,8 +69,11 @@ let MINIMUM_NUTRIENTS = SUSTENANCE_LEVEL // if theres nothing above this try to 
 const DIVERGENCE_MINIMUM_THICKNESS = MINIMUM_THICKNESS * 2.5;
 const DIVERGENCE_MINIMUM_NUTRIENTS = 0.4;
 
-let SECTIONS_PER_FLOWER = 350;
-let FLOWER_SIZE_RATIO = 4.2;
+let DEFAULT_SECTIONS_PER_FLOWER = 350;
+let DEFAULT_FLOWER_SIZE_RATIO = 4.2;
+let sections_per_flower;
+let flower_size_ratio;
+
 const FLOWER_START_OFFSET = 10; // set to 10 for words
 
 let NOISE_OCTAVES = 8;
@@ -79,7 +82,7 @@ let NOISE_SCALE = 0.03; //most interesting one honestly
 
 const FLOWER_STEP_SIZE = 15;
 const ITERATION_COUNT = 2;
-const MAX_PETAL_COUNT = 8;
+const MAX_MIN_PETAL_COUNT = 8; // + 2
 const FLOWER_ITERATION_OFFSET = 0.05;
 
 // Selected font and text
@@ -122,7 +125,7 @@ let tendril_coords = [];
 let starting_points_array = [];
 const text_points = [];
 let flower_dna;
-let petal_count;
+let min_petal_count;
 let flower_attraction;
 
 let tendril_graphics;
@@ -198,12 +201,14 @@ function setup_generator_module() {
 
   cropped_photo.loadPixels()
 
-  petal_count = 2 + round(random()*MAX_PETAL_COUNT);
-  // petal_count = 4;
+  min_petal_count = 2 + round(random()*MAX_MIN_PETAL_COUNT);
   flower_attraction = 100 + random() * 100000
   // flower_attraction = 1000;
   
   flower_dna = Flower.generateUnitDNA();
+  const flower_scale_ratio = 0.5 + random();
+  sections_per_flower = DEFAULT_SECTIONS_PER_FLOWER;
+  flower_size_ratio = DEFAULT_FLOWER_SIZE_RATIO;
 
   createCanvas( 
     ceil(DISPLAY_RATIO * hoop.w), 
@@ -479,8 +484,8 @@ function keyPressed(){
     let MINIMUM_NUTRIENTS = ${MINIMUM_NUTRIENTS} // if theres nothing above this try to converge. remember its linked to amount of scan steps
     const DIVERGENCE_MINIMUM_THICKNESS = ${DIVERGENCE_MINIMUM_THICKNESS};
     const DIVERGENCE_MINIMUM_NUTRIENTS = ${DIVERGENCE_MINIMUM_NUTRIENTS};
-    let SECTIONS_PER_FLOWER = ${SECTIONS_PER_FLOWER};
-    let FLOWER_SIZE_RATIO = ${FLOWER_SIZE_RATIO};
+    let sections_per_flower = ${sections_per_flower};
+    let flower_size_ratio = ${flower_size_ratio};
     let NOISE_OCTAVES = ${NOISE_OCTAVES};
     let NOISE_FALLOFF = ${NOISE_FALLOFF};
     let NOISE_SCALE = ${NOISE_SCALE};`;

@@ -162,7 +162,7 @@ class runner {
     }
 
     // grow a flower
-    if(this.last_sections.length > 0 && (flowers.length + FLOWER_START_OFFSET) * SECTIONS_PER_FLOWER < sections.length && random() > 0.95){
+    if(this.last_sections.length > 0 && (flowers.length + FLOWER_START_OFFSET) * sections_per_flower < sections.length && random() > 0.95){
         //check surrounding thicknesses
         let depth = 0;
         let checking_section = sections[this.last_sections[0]];
@@ -176,12 +176,13 @@ class runner {
             depth++;
         }
 
+        const radius = max(total_thickness*flower_size_ratio/15, 30)
         const flower = new Flower(
             this.pos.x,  // x
             this.pos.y,  // y
-            max(total_thickness*FLOWER_SIZE_RATIO/15, 30),  // radius
+            radius,  // radius
             random()*2*PI, // rotation
-            petal_count,  // petal count
+            min_petal_count + round((0.5 + 0.5*random()) * radius / 20),  // petal count
             flower_dna, // unit profile
         );
         flowers.push(flower);
@@ -189,7 +190,7 @@ class runner {
         // print(`flower depth: ${depth}`)
         // const flower = {
         //     pos: this.pos,
-        //     radius: total_thickness*FLOWER_SIZE_RATIO/15,
+        //     radius: total_thickness*flower_size_ratio/15,
         //     noise: runners.filter(r => r.live).length
         // }
         // flowers.push(flower)
