@@ -7,6 +7,8 @@ const y_margin = 30;
 let input_canvas;
 let uncropped_file_input;
 let cropped_file_input;
+let uncropped_file;
+let cropped_file;
 let hoop_size_input;
 let next_phase_button;
 
@@ -15,10 +17,10 @@ let fabric_inputs = [];
 function setup_input_module(){
     input_canvas = createCanvas(500,500);
     textAlign(RIGHT, TOP)
-    uncropped_file_input = createFileInput((file) => uncropped_photo = handle_file(file));
+    uncropped_file_input = createFileInput((file) => uncropped_file = handle_file(file));
     uncropped_file_input.position(x_1, y_0);
     text("Upload uncropped photo", x_0, y_0 + 5)
-    cropped_file_input = createFileInput((file) => cropped_photo = handle_file(file));
+    cropped_file_input = createFileInput((file) => cropped_file = handle_file(file));
     cropped_file_input.position(x_1, y_0 + y_margin);
     text("Upload cropped photo", x_0, y_0 + y_margin + 5)
 
@@ -38,7 +40,12 @@ function setup_input_module(){
 }
 
 function draw_input_module(){
-    return;
+    if(cropped_file && cropped_file.width > 0 && !cropped_photo){
+        cropped_photo = update_image(cropped_file)
+    }
+    if(uncropped_file && uncropped_file.width > 0 && !uncropped_photo){
+        uncropped_photo = update_image(uncropped_file)
+    }
 }
 
 function finalize_inputs(){
@@ -66,7 +73,7 @@ function destroy_input_module(){
 }
 
 function handle_file(file_in){
-    let file_out
+    let file_out;
     if (file_in.type === 'image') {
         file_out = createImg(file_in.data, '');
         file_out.hide();
@@ -78,4 +85,10 @@ function handle_file(file_in){
         file_out = null;
     }
     return file_out;
+}
+
+function update_image(image_in){
+    let image_out = createGraphics(image_in.width, image_in.height);
+    image_out.image(image_in, 0, 0, image_out.width, image_out.height);
+    return image_out;
 }

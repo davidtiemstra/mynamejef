@@ -57,7 +57,12 @@ class runner {
         const xi = Math.floor(this.pos.x / IX_HALF_SQUARE_SIZE);
         const yi = Math.floor(this.pos.y / IX_HALF_SQUARE_SIZE);
 
-        sections_by_index = sections_by_index.concat(ix_sections[xi][yi]);
+        try{
+            sections_by_index = sections_by_index.concat(ix_sections[xi][yi]);
+        } catch{
+            debugger;
+        }
+        
         if(xi>0) sections_by_index = sections_by_index.concat(ix_sections[xi-1][yi]);
         if(yi>0) sections_by_index = sections_by_index.concat(ix_sections[xi][yi-1]);
         if(xi>0 && yi>0) sections_by_index = sections_by_index.concat(ix_sections[xi-1][yi-1]);
@@ -76,6 +81,7 @@ class runner {
 
         scan_results.push(this_scan);
     }
+
     // calculate total scores based on nutrients - intersections
     const scan_totals = scan_results.map(s => s.nutrient_total - s.intersections * INTERSECTION_PENALTY * scan_results[0].nutrient_samples.length);
 
@@ -198,7 +204,7 @@ class runner {
         // strokeWeight(1);
     }
 
-    if(DEBUG_COLORS) stroke(0,(this.last_consumption - SUSTENANCE_LEVEL)* 255, (SUSTENANCE_LEVEL - this.last_consumption) * 255);
+    if(DEBUG_COLORS) tendril_graphics.stroke(0,(this.last_consumption - SUSTENANCE_LEVEL)* 255, (SUSTENANCE_LEVEL - this.last_consumption) * 255);
     sections.push(new section(this.pos.copy(), this.dir, this.thickness, this.last_sections[0] ?? null ));
 
     let p0;

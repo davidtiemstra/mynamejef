@@ -3,6 +3,7 @@ const FABRICS = [
     "cotton",
     "linen",
     "silk",
+    "hemp",
     "synthetic"
 ];
 let fabric_composition = [];
@@ -11,6 +12,8 @@ let phase = 0;
 let uncropped_photo;
 let cropped_photo;
 let filename;
+let input_phase_done = false;
+
 let hoop_size = "s";
 
 const DISPLAY_RATIO = 1;
@@ -27,12 +30,6 @@ const HOOP = {
   }
 }
 let hoop;
-
-let input_phase_done = false;
-
-function preload() {
-  photo_input = loadImage(`../photos/${PHOTO_NUMBER}.jpg`)
-}
 
 function setup() {
     setup_input_module();

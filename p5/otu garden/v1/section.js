@@ -39,13 +39,13 @@ class section{
         // }     
 
         const pp = sections[this.previous]?.p1;
-        if(pp) line(
+        if(pp) tendril_graphics.line(
             DISPLAY_RATIO * pp.x,
             DISPLAY_RATIO * pp.y,
             DISPLAY_RATIO * this.p0.x,
             DISPLAY_RATIO * this.p0.y
         );
-        line(
+        tendril_graphics.line(
             DISPLAY_RATIO * this.p0.x,
             DISPLAY_RATIO * this.p0.y,
             DISPLAY_RATIO * this.p1.x,

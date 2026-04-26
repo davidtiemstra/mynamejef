@@ -5,7 +5,8 @@ delft maker faire changes:
   [x] crop photo
   [x] apply nutrient map to tendril algo
 [x] switch big and small hoop
-[ ] streamline ui to make this whole flow work better
+[x] streamline ui to make this whole flow work better
+[x] embroider title in flower color.
 [ ] flower inputs
   [ ] fabric parameter input boxes
   [ ] intialize flower parameters
@@ -35,14 +36,27 @@ const PHASES = {
   4: "generation_end" // generation reached equilibrium or ended manually, download .dst
 }
 
-let current_phase = 0;
+const FABRICS = [
+  "wool",
+  "cotton",
+  "linen",
+  "silk",
+  "hemp",
+  "synthetic"
+];
+
+let phase = 0;
 
 // photo interface stuff
 const DEBUG_PHOTO_NUMBER = 3;
+
+const FILL_TEXT = true;
 const WEIGHED_CONTRAST = false; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
-const hoop_size = "s";
 const DEBUG_COLORS = true;
 const SHOW_RENDER_MAP = false;
+const FILL_DENSITY = 2;
+const FILL_STEP = 20;
+let hoop_size = "s"; // sets the default but that only matters if youre skipping the input phase
 
 const ALLOW_CONVERGENCE = false; // i think maybe convergence was a mistake. still does it at the very start. idk its hard to let go.
 
@@ -94,6 +108,15 @@ const MAX_BEZIER_HANDLE_LENGTH = 100;
 
 const IX_HALF_SQUARE_SIZE = 50; // this is just for indexing the sections. should go right as long as this is higher than scan distance
 
+
+// input variables
+let fabric_composition = [];
+let uncropped_photo;
+let cropped_photo;
+let filename;
+let input_phase_done = false;
+
+// generation variables
 let runners = [];
 let sections = [];
 let ix_sections = [];
@@ -105,10 +128,12 @@ let flower_profile;
 let petal_count;
 let flower_attraction;
 
+let tendril_graphics;
+let fill_coords = [];
+
 let theFont;
 let text_angle = 0;
 
-let processed_photo;
 let invert_pixels = false;
 let render_map;
 
@@ -130,15 +155,42 @@ let hoop;
 
 function preload() {
   theFont = loadFont(`../fonts/${FONT_FILENAME}`)
-  processed_photo = loadImage(`photos/${DEBUG_PHOTO_NUMBER}_processed.jpg`)
+  // debug_photo = loadImage(`photos/${DEBUG_PHOTO_NUMBER}_processed.jpg`)
+}
+
+function draw() {
+  switch(phase){
+    case 0:
+      draw_input_module();
+      if(input_phase_done && cropped_photo != null){
+        destroy_input_module();
+        setup_generator_module();
+        phase = 2;
+      }
+      else if(input_phase_done && uncropped_photo != null){
+        destroy_input_module()
+        setup_photo_module(hoop.w * DISPLAY_RATIO, hoop.h * DISPLAY_RATIO);
+        phase = 1;
+      }
+      break;
+    case 1:
+      draw_photo_module();
+      if(input_phase_done && cropped_photo != null){
+          destroy_photo_module();
+          setup_generator_module();
+          phase = 2;
+      }
+      break;
+    case 2:
+      draw_generator_module();
+  }
 }
 
 function setup() {
-  // here i want to call setup_photo_module(w, h) eventually but for now im still tweaking parameters so ill leave it
-  setup_generator();
+  setup_input_module();
 }
 
-function setup_generator() {
+function setup_generator_module() {
   const noise_seed = round(random()*10000);
   print(`seed: ${noise_seed}`);
   noiseSeed(noise_seed);
@@ -147,7 +199,7 @@ function setup_generator() {
 
   hoop = HOOP[hoop_size];
 
-  processed_photo.loadPixels()
+  cropped_photo.loadPixels()
 
   petal_count = 2 + round(random()*MAX_PETAL_COUNT);
   // petal_count = 4;
@@ -163,6 +215,7 @@ function setup_generator() {
     ceil(DISPLAY_RATIO * hoop.w), 
     ceil(DISPLAY_RATIO * hoop.h) 
   );
+  tendril_graphics = createGraphics(width, height)
 
   // fill section index for performance.
   for(let x=0; x < hoop.w; x += IX_HALF_SQUARE_SIZE){
@@ -181,9 +234,9 @@ function setup_generator() {
   let highest_pixel = [0,0,0];
   for(let i=0; i<width*height*4; i+=4){
     for(let j=0; j<3; j++){
-      average[j] += processed_photo.pixels[i+j];
-      lowest_pixel[j] = min(processed_photo.pixels[i+j], lowest_pixel[j])
-      highest_pixel[j] = max(processed_photo.pixels[i+j], highest_pixel[j])
+      average[j] += cropped_photo.pixels[i+j];
+      lowest_pixel[j] = min(cropped_photo.pixels[i+j], lowest_pixel[j])
+      highest_pixel[j] = max(cropped_photo.pixels[i+j], highest_pixel[j])
     }
   }
   average = [average[0] / (width*height), average[1] / (width*height), average[2] / (width*height)]
@@ -191,8 +244,8 @@ function setup_generator() {
   let contrasts = [0,0,0]
   for(let i=0; i<width*height*4; i+=4){
     for(let j=0; j<3; j++){
-      contrasts[j] += abs(average[j] - processed_photo.pixels[i+j]);
-      processed_photo.pixels[i+j] = (processed_photo.pixels[i+j] - lowest_pixel[j]) * 255 / (highest_pixel[j] - lowest_pixel[j])
+      contrasts[j] += abs(average[j] - cropped_photo.pixels[i+j]);
+      cropped_photo.pixels[i+j] = (cropped_photo.pixels[i+j] - lowest_pixel[j]) * 255 / (highest_pixel[j] - lowest_pixel[j])
     }
   }
   const total_contrast = contrasts[0] + contrasts[1] + contrasts[2];
@@ -205,9 +258,9 @@ function setup_generator() {
     average[max_contrast_index] > 127;
   
   for(let i=0; i<width*height*4; i+=4){
-    processed_photo.pixels[i] = WEIGHED_CONTRAST ? 
-      contrasts[0] * processed_photo.pixels[i] + contrasts[1] * processed_photo.pixels[i+1] +  contrasts[2] * processed_photo.pixels[i+2] : 
-      processed_photo.pixels[i + max_contrast_index];
+    cropped_photo.pixels[i] = WEIGHED_CONTRAST ? 
+      contrasts[0] * cropped_photo.pixels[i] + contrasts[1] * cropped_photo.pixels[i+1] +  contrasts[2] * cropped_photo.pixels[i+2] : 
+      cropped_photo.pixels[i + max_contrast_index];
   }
   print(`lowest (r,g,b): ${lowest_pixel}`)
   print(`highest (r,g,b): ${highest_pixel}`)
@@ -243,10 +296,13 @@ function setup_generator() {
   }
 }
 
-function draw() {
+function draw_generator_module() {
+  background(255)
+  rect(0,0,width,height)
+  SHOW_RENDER_MAP ? image(render_map,0,0,width,height) : image(cropped_photo,0,0,width,height);
+  background(255,50)
+
   if(runners.length==0){
-    background(255)
-    SHOW_RENDER_MAP ? image(render_map,0,0,width,height) : image(processed_photo,0,0,width,height);
     
     strokeWeight(3)
     rect(0,0,width,height)
@@ -255,7 +311,7 @@ function draw() {
     // im drawing the text at full resolution now not the sample resolution.
     // u can view sample resultion by uncommenting beginshape/vertex/endshape below.
     noFill();
-    stroke(0);
+    stroke("darkred");
     textSize(hoop.font);
     textAlign(CENTER, CENTER)
     push();
@@ -296,28 +352,38 @@ function draw() {
   }
 
   // step all runners (non parallel)
+  // noStroke();
+  // strokeWeight(1)
   for(const runner of runners){
-    noStroke();
-    strokeWeight(1)
     if(runner.live) runner.scan();
   }
   
+  tendril_graphics.noFill();
+  tendril_graphics.strokeWeight(2);
+
+  tendril_graphics.stroke("darkgreen");
   for(const runner of runners){
-    stroke("darkgreen")
-    noFill();
-    strokeWeight(2)
     if(runner.live) runner.step();
   }
+
+  image(tendril_graphics, 0, 0, width, height)
   
+  stroke("darkred");
+  strokeWeight(2);
   for(const flower of flowers){
-    noFill();
-    stroke("darkred");
-    strokeWeight(3);
     flower.drawFlower();
   }
 
+  if(FILL_TEXT){
+    strokeWeight(2);
+    beginShape();
+    for(let c of fill_coords){
+      vertex(c.x, c.y)
+    }
+    endShape(CLOSE);
+  }
 
-  // step all flowers?
+  // step all flowers? -> for animation, see live version
 
   // export when all runners & flowers are dead
   // start with 2 stitch sections so i dont have to do any fucked up interpolation.
@@ -325,16 +391,14 @@ function draw() {
 }
 
 function mouseClicked(){
+  if(phase != 2) return;
   if(runners.length > 0) return
-
-  background(255)
-  rect(0,0,width,height)
-  SHOW_RENDER_MAP ? image(render_map,0,0,width,height) : image(processed_photo,0,0,width,height);
-  background(255,50)
 
   print(`mouse clicked at X:${mouseX}, Y:${mouseY}`)
 
   for(let i=0; i<starting_points_array.length; i++){
+    fill_coords = fill_coords.concat(horizontal_fill(starting_points_array[i]));
+
     let first_runner_index = null;
     for(let j=0; j<starting_points_array[i].length; j++){
       const pos = createVector(starting_points_array[i][j].x, starting_points_array[i][j].y)
@@ -375,10 +439,13 @@ function mouseClicked(){
 }
 
 function mouseWheel(event) {
+  if(phase != 2) return;
   text_angle = (text_angle + Math.sign(event.delta) * 0.02 * PI) % (2*PI);
 }
 
+// these should be separate createButtons
 function keyPressed(){
+  if(phase != 2) return;
   if(key === 'e' || key === 'E'){
     tendril_coords = [];
     //reset all section embroidered properties for repeatability
@@ -395,6 +462,8 @@ function keyPressed(){
     tendril_coords = tendril_coords.filter(c => c.x > 0 && c.x < hoop.w && c.y > 0 && c.y < hoop.h );
 
     tendril_coords.push("STOP")
+
+    if(FILL_TEXT) tendril_coords = tendril_coords.concat(fill_coords)
 
     flowers[0].embroider();
     while(flowers.some(f => !f.embroidered)){
@@ -466,13 +535,73 @@ function sample_nutrient_map(coord){
   if(coord.y < NUTRIENT_BORDER)          falloff = min(falloff, falloff * (coord.y * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS));
   if(coord.y > hoop.h - NUTRIENT_BORDER) falloff = min(falloff, falloff * ((coord.y - hoop.h) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS));
 
-  let photo_sample = processed_photo.pixels[(floor(coord.x) + width * floor(coord.y))*4] / 127;
+  let photo_sample = cropped_photo.pixels[(floor(coord.x) + width * floor(coord.y))*4] / 127;
   photo_sample = sin(photo_sample * PI * 0.5 + 1.5 * PI) + 1 // this increases contrast but maybe i dont need that actually
   if(invert_pixels) photo_sample = 2.0 - photo_sample;
 
   let noise_sample = 0.1 + 0.8 * noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE)
 
+  if(isNaN(photo_sample)){
+    debugger;
+  }
+
   return noise_sample * falloff * photo_sample;
+}
+
+function horizontal_fill(polygon){
+  // we are assumaing a closed polygon which may consist of multiple sections?
+  let y_start = height, y_end = 0, x_start = width, x_end = 0;
+  for(let point of polygon){
+   y_start = min(y_start, point.y);
+   x_start = min(x_start, point.x);
+   y_end = max(y_end, point.y);
+   x_end = max(x_end, point.x);
+  }
+
+  // rect(x_start,y_start,x_end-x_start,y_end-y_start)
+
+  let rows = [];
+  for(let y = y_start; y < y_end; y += FILL_DENSITY){
+    // im thinking we find the intersections, turn those into "columns" and connect them
+    let intersections = [];
+    for(let i=0; i< polygon.length; i++){
+      if(Math.sign(polygon[i].y - y) != Math.sign(polygon[(i+1)%polygon.length].y - y)){
+        const p1 = createVector(polygon[i].x, polygon[i].y);
+        const p2 = createVector(polygon[(i+1)%polygon.length].x, polygon[(i+1)%polygon.length].y);
+        intersections.push(p5.Vector.add(p1, p5.Vector.mult(p5.Vector.sub(p2, p1), (y-p1.y) / (p2.y-p1.y) )));
+        // point(intersections[intersections.length-1].x,intersections[intersections.length-1].y)
+      }
+    }
+    
+    // every 2 intersections become a column in the row.
+    //sort by x, split up, fill the gaps
+    if(intersections.length == 0 || intersections.length % 2 != 0) return;
+    rows.push([])
+    intersections.sort((a,b) => a.x - b.x);
+    for(let i=0; i*2<intersections.length; i++){
+      rows[rows.length-1].push();
+      let left_or_right = (rows.length % 2 == 0) * 2 - 1;
+      if(left_or_right > 0) rows[rows.length-1].push([intersections[i*2]]);
+
+      let x = (left_or_right > 0 ? intersections[i*2].x : intersections[i*2 + 1] ) + left_or_right * FILL_STEP * (0.5 + random() * 0.5);
+      while(left_or_right > 0 ? (x < intersections[i*2 + 1].x - FILL_STEP) : (x > intersections[i*2].x + FILL_STEP)){
+        // point(x,y)
+        rows[rows.length-1][i].push(createVector(x, y))
+        x += left_or_right * FILL_STEP * (0.5 + random() * 0.5);
+      }
+      if(left_or_right > 0) rows[rows.length-1][i].push(intersections[i*2 + 1]);
+    }
+  }
+  
+  let fill_coords = [];
+  for(let col = 0; col < 20; col++){ // we're just not doing polygons with more than 20 columns come on lmao
+    for( let row = 0; row < rows.length; row ++){
+      if(!rows[row][col]) continue;
+      fill_coords = fill_coords.concat(rows[row][col])
+    }
+  }
+  print(fill_coords)
+  return fill_coords;
 }
 
 // STOLEN HELPER SHIT

@@ -2,8 +2,6 @@ const PHOTO_NUMBER = 1;
 const INIT_IMG_SCALE = 0.45;
 const GRAB_SQUARE = 0.4;
 const QUAD_SEGS = 10;
-const OUTPUT_HEIGHT = 1000;
-let output_size;
 
 let pulling_vert = -1;
 
@@ -15,11 +13,10 @@ let photo_canvas;
 let finish_crop_button;
 
 function setup_photo_module(w, h) {
-    output_size = createVector(OUTPUT_HEIGHT * hoop.w/hoop.h, OUTPUT_HEIGHT)
     photo_canvas = createCanvas(w, h);
     photo_canvas.mousePressed(start_drag_corner);
     photo_canvas.mouseReleased(release_corner);
-    photo_graphics = createGraphics(output_size.x * 0.5/GRAB_SQUARE, output_size.y* 0.5/GRAB_SQUARE, WEBGL);
+    photo_graphics = createGraphics(hoop.w * 0.5/GRAB_SQUARE, hoop.h* 0.5/GRAB_SQUARE, WEBGL);
     finish_crop_button = createButton('Next phase');
     // button.position(0, 100);
     finish_crop_button.mousePressed(get_photo_map);
@@ -110,11 +107,11 @@ function draw_photo_module() {
 
 
 function get_photo_map(){
-    let g = createGraphics(output_size.x, output_size.y);
+    let g = createGraphics(hoop.w, hoop.h);
     g.image(
         photo_graphics, 
-        (output_size.x - photo_graphics.width)*0.5, 
-        (output_size.y - photo_graphics.height)*0.5,
+        (hoop.w - photo_graphics.width)*0.5, 
+        (hoop.h - photo_graphics.height)*0.5,
         photo_graphics.width, photo_graphics.height);
     g.save(`CROPPED_${hoop_size.toUpperCase()}_${filename}`) // so u dont gotaa recrop it
     cropped_photo = g;
