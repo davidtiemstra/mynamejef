@@ -1,4 +1,15 @@
 {
     "editor.inlineSuggest.enabled": false,
-    "editor.acceptSuggestionOnCommitCharacter": false
+    "editor.acceptSuggestionOnCommitCharacter": false,
+    "python.languageServer": "Pylance",
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingModuleSource": "none",
+        "reportShadowedImports": "none"
+    },
+    "python.analysis.extraPaths": [
+        "",
+        "/Users/semallush/.vscode/extensions/joedevivo.vscode-circuitpython-0.2.0-darwin-x64/stubs",
+        "/Users/semallush/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20260424/adafruit-circuitpython-bundle-py-20260424/lib"
+    ],
+    "circuitpython.board.version": null
 }
