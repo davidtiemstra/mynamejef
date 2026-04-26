@@ -2,22 +2,24 @@ const PHOTO_NUMBER = 1;
 const INIT_IMG_SCALE = 0.45;
 const GRAB_SQUARE = 0.4;
 const QUAD_SEGS = 10;
-const OUTPUT_SIZE = 1000;
+const OUTPUT_HEIGHT = 1000;
+let output_size;
 
 let pulling_vert = -1;
 
 let corners = [];
-let corners_on_screen = [];
+// let corners_on_screen = [];
 
 let photo_graphics;
 let photo_canvas;
 let finish_crop_button;
 
 function setup_photo_module(w, h) {
+    output_size = createVector(OUTPUT_HEIGHT * hoop.w/hoop.h, OUTPUT_HEIGHT)
     photo_canvas = createCanvas(w, h);
     photo_canvas.mousePressed(start_drag_corner);
     photo_canvas.mouseReleased(release_corner);
-    photo_graphics = createGraphics(OUTPUT_SIZE * 0.5/GRAB_SQUARE, OUTPUT_SIZE* 0.5/GRAB_SQUARE, WEBGL);
+    photo_graphics = createGraphics(output_size.x * 0.5/GRAB_SQUARE, output_size.y* 0.5/GRAB_SQUARE, WEBGL);
     finish_crop_button = createButton('Next phase');
     // button.position(0, 100);
     finish_crop_button.mousePressed(get_photo_map);
@@ -29,12 +31,12 @@ function setup_photo_module(w, h) {
         createVector(-INIT_IMG_SCALE, INIT_IMG_SCALE)
     ];
 
-    corners_on_screen = [
-        createVector(-GRAB_SQUARE,-GRAB_SQUARE),
-        createVector(GRAB_SQUARE,-GRAB_SQUARE),
-        createVector(GRAB_SQUARE,GRAB_SQUARE),
-        createVector(-GRAB_SQUARE, GRAB_SQUARE)
-    ];
+    // corners_on_screen = [
+    //     createVector(-GRAB_SQUARE,-GRAB_SQUARE),
+    //     createVector(GRAB_SQUARE,-GRAB_SQUARE),
+    //     createVector(GRAB_SQUARE,GRAB_SQUARE),
+    //     createVector(-GRAB_SQUARE, GRAB_SQUARE)
+    // ];
 
     loop();
 }
@@ -108,13 +110,13 @@ function draw_photo_module() {
 
 
 function get_photo_map(){
-    let g = createGraphics(OUTPUT_SIZE, OUTPUT_SIZE);
+    let g = createGraphics(output_size.x, output_size.y);
     g.image(
         photo_graphics, 
-        (OUTPUT_SIZE - photo_graphics.width)*0.5, 
-        (OUTPUT_SIZE - photo_graphics.height)*0.5,
+        (output_size.x - photo_graphics.width)*0.5, 
+        (output_size.y - photo_graphics.height)*0.5,
         photo_graphics.width, photo_graphics.height);
-    g.save(`CROPPED_${filename}`) // so u dont gotaa recrop it
+    g.save(`CROPPED_${hoop_size.toUpperCase()}_${filename}`) // so u dont gotaa recrop it
     cropped_photo = g;
 }
 

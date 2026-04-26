@@ -5,12 +5,28 @@ const FABRICS = [
     "silk",
     "synthetic"
 ];
-let fabric_inputs = [];
+let fabric_composition = [];
 
 let phase = 0;
 let uncropped_photo;
 let cropped_photo;
 let filename;
+let hoop_size = "s";
+
+const DISPLAY_RATIO = 1;
+const HOOP = {
+  s:{
+    w: 1000,
+    h: 1000,
+    font: 256
+  },
+  l:{
+    w:1800,
+    h:1300,
+    font: 324
+  }
+}
+let hoop;
 
 let input_phase_done = false;
 
@@ -33,7 +49,7 @@ function draw() {
             }
             else if(input_phase_done && uncropped_photo != null){
                 destroy_input_module()
-                setup_photo_module(500, 500);
+                setup_photo_module(hoop.w * DISPLAY_RATIO, hoop.h * DISPLAY_RATIO);
                 phase = 1;
             }
             break;
@@ -51,7 +67,7 @@ function draw() {
 }
 
 function setup_generator_module(){
-    createCanvas(400,400);
+    createCanvas(hoop.w * DISPLAY_RATIO, hoop.h * DISPLAY_RATIO);
 }
 
 function draw_generator_module(){
