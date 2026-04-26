@@ -129,7 +129,7 @@ let min_petal_count;
 let flower_attraction;
 
 let tendril_graphics;
-let fill_coords = [];
+let text_fill_coords = [];
 
 let theFont;
 let text_angle = 0;
@@ -206,7 +206,7 @@ function setup_generator_module() {
   // flower_attraction = 1000;
   
   flower_dna = Flower.generateUnitDNA();
-  const flower_scale_ratio = 0.5 + random();
+  const flower_scale_ratio = (0.5 + random()) * (hoop_size == "s" ? 0.6 : 1.0);
   sections_per_flower = DEFAULT_SECTIONS_PER_FLOWER;
   flower_size_ratio = DEFAULT_FLOWER_SIZE_RATIO;
 
@@ -376,7 +376,7 @@ function draw_generator_module() {
   if(FILL_TEXT){
     strokeWeight(2);
     beginShape();
-    for(let c of fill_coords){
+    for(let c of text_fill_coords){
       vertex(c.x, c.y)
     }
     endShape(CLOSE);
@@ -396,7 +396,7 @@ function mouseClicked(){
   print(`mouse clicked at X:${mouseX}, Y:${mouseY}`)
 
   for(let i=0; i<starting_points_array.length; i++){
-    fill_coords = fill_coords.concat(horizontal_fill(starting_points_array[i]));
+    text_fill_coords = text_fill_coords.concat(horizontal_fill(starting_points_array[i]));
 
     let first_runner_index = null;
     for(let j=0; j<starting_points_array[i].length; j++){
@@ -462,7 +462,7 @@ function keyPressed(){
 
     tendril_coords.push("STOP")
 
-    if(FILL_TEXT) tendril_coords = tendril_coords.concat(fill_coords)
+    if(FILL_TEXT) tendril_coords = tendril_coords.concat(text_fill_coords)
 
     flowers[0].embroider();
     print(flowers)
@@ -575,7 +575,7 @@ function horizontal_fill(polygon){
     
     // every 2 intersections become a column in the row.
     //sort by x, split up, fill the gaps
-    if(intersections.length == 0 || intersections.length % 2 != 0) return;
+    if(intersections.length == 0 || intersections.length % 2 != 0) continue;
     rows.push([])
     intersections.sort((a,b) => a.x - b.x);
     for(let i=0; i*2<intersections.length; i++){
@@ -600,7 +600,6 @@ function horizontal_fill(polygon){
       fill_coords = fill_coords.concat(rows[row][col])
     }
   }
-  print(fill_coords)
   return fill_coords;
 }
 
