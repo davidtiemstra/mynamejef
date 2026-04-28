@@ -76,7 +76,7 @@ class runner {
             if(!this.last_sections.includes(section_id) && section.pos.dist(this.pos) - section.thickness > SCAN_DISTANCE) continue;
 
             //line segment intersection check
-            this_scan.intersections += runner.find_intersection(this.pos, p1, section.p0, section.p1)
+            this_scan.intersections += dst.findIntersection(this.pos, p1, section.p0, section.p1, false)
         }
 
         scan_results.push(this_scan);
@@ -493,40 +493,6 @@ class runner {
         3 * (1 - t) * Math.pow(t, 2) * p2.y + 
         Math.pow(t, 3) * p3.y
     )
-  }
-
-  static find_intersection( p0, p1, p2, p3 ) {
-    const s10_x = p1.x - p0.x
-    const s10_y = p1.y - p0.y
-    const s32_x = p3.x - p2.x
-    const s32_y = p3.y - p2.y
-
-    const denom = s10_x * s32_y - s32_x * s10_y
-
-    if (denom == 0) { return null } // collinear
-
-    const denom_is_positive = denom > 0
-
-    const s02_x = p0.x - p2.x
-    const s02_y = p0.y - p2.y
-
-    const s_numer = s10_x * s02_y - s10_y * s02_x
-
-    if ((s_numer < 0) == denom_is_positive) { return null } // no collision
-
-    const t_numer = s32_x * s02_y - s32_y * s02_x
-
-    if ((t_numer < 0) == denom_is_positive) { return null } // no collision
-
-    if ((s_numer > denom) == denom_is_positive || (t_numer > denom) == denom_is_positive) { return null } // no collision
-
-    // // collision detected. uncomment to get intersection point
-    // t = t_numer / denom
-    // intersection_point = createVector( p0.x + (t * s10_x), p0.y + (t * s10_y) )
-
-    // return intersection_point
-
-    return true;
   }
 
   static index_of_max(arr) {

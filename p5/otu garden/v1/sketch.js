@@ -13,8 +13,17 @@ delft maker faire changes:
   [ ] intialize flower parameters using fabric
   [x] pass variable petal count (based on what?)
   [x] pass flower parameters when instantiating flower
+[x] add outline
+  [ ] double check that its actually bug free now lmao.
+  [ ] also if possible try to optimize bc my laptop is gonna fucking die from this.
+[ ] generate from little circle -> more points, no convergence
 [ ] purge tendril sections that are covered by flowers from dst export
+  [ ] maybe also purge sooooome of the tendril sections overlapping with eachother
+[x] add a generate without picture button (i.e. classic mode)
+  [x] have a nutrient slider or smth.
+[ ] adjust size to fit in window
 [ ] tweak generation parameters
+[ ] fix adjustable display ratio
 [ ] make the ui pretty
 
 old todo/versions:
@@ -47,6 +56,7 @@ let phase = 0;
 // photo interface stuff
 const DEBUG_PHOTO_NUMBER = 3;
 
+const USE_OUTLINE = true;
 const FILL_TEXT = true;
 const WEIGHED_CONTRAST = false; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
 const DEBUG_COLORS = true;
@@ -86,7 +96,6 @@ const MAX_MIN_PETAL_COUNT = 8; // + 2
 const FLOWER_ITERATION_OFFSET = 0.05;
 
 // Selected font and text
-// let theText = 'papu1';
 let theText = 'otu';
 const FONT_FILENAME = "Flexi_IBM_VGA_False.ttf"
 const TEXT_SAMPLE_FACTOR = 0.03;
@@ -96,6 +105,8 @@ const STEP_SIZE = 6; //in DU
 const NUTRIENT_BORDER = 50; // make nutrients falloff near border
 const BORDER_STEEPNESS = 5;
 const DISPLAY_RATIO = 1;
+
+// display ratios other than 1 do not work rn lol.
 // const DISPLAY_RATIO = 0.4; // real value for pc screen
 // const DISPLAY_RATIO = 0.55; // real value for laptop screen
 
@@ -115,6 +126,7 @@ let uncropped_photo;
 let cropped_photo;
 let filename;
 let input_phase_done = false;
+let no_photo_mode = false;
 
 // generation variables
 let runners = [];
@@ -130,6 +142,8 @@ let flower_attraction;
 
 let tendril_graphics;
 let text_fill_coords = [];
+let outline = [];
+let satin_outline = [];
 
 let theFont;
 let text_angle = 0;
@@ -228,43 +242,45 @@ function setup_generator_module() {
 
   // -----------TWEAK IMAGE RENDERING------------------
   // theres a lot of things here that im doing a million times lol
-  let average = [0,0,0]
-  let lowest_pixel = [255,255,255];
-  let highest_pixel = [0,0,0];
-  for(let i=0; i<width*height*4; i+=4){
-    for(let j=0; j<3; j++){
-      average[j] += cropped_photo.pixels[i+j];
-      lowest_pixel[j] = min(cropped_photo.pixels[i+j], lowest_pixel[j])
-      highest_pixel[j] = max(cropped_photo.pixels[i+j], highest_pixel[j])
+  if(!no_photo_mode){
+    let average = [0,0,0]
+    let lowest_pixel = [255,255,255];
+    let highest_pixel = [0,0,0];
+    for(let i=0; i<width*height*4; i+=4){
+      for(let j=0; j<3; j++){
+        average[j] += cropped_photo.pixels[i+j];
+        lowest_pixel[j] = min(cropped_photo.pixels[i+j], lowest_pixel[j])
+        highest_pixel[j] = max(cropped_photo.pixels[i+j], highest_pixel[j])
+      }
     }
-  }
-  average = [average[0] / (width*height), average[1] / (width*height), average[2] / (width*height)]
-  
-  let contrasts = [0,0,0]
-  for(let i=0; i<width*height*4; i+=4){
-    for(let j=0; j<3; j++){
-      contrasts[j] += abs(average[j] - cropped_photo.pixels[i+j]);
-      cropped_photo.pixels[i+j] = (cropped_photo.pixels[i+j] - lowest_pixel[j]) * 255 / (highest_pixel[j] - lowest_pixel[j])
+    average = [average[0] / (width*height), average[1] / (width*height), average[2] / (width*height)]
+    
+    let contrasts = [0,0,0]
+    for(let i=0; i<width*height*4; i+=4){
+      for(let j=0; j<3; j++){
+        contrasts[j] += abs(average[j] - cropped_photo.pixels[i+j]);
+        cropped_photo.pixels[i+j] = (cropped_photo.pixels[i+j] - lowest_pixel[j]) * 255 / (highest_pixel[j] - lowest_pixel[j])
+      }
     }
-  }
-  const total_contrast = contrasts[0] + contrasts[1] + contrasts[2];
-  contrasts = [contrasts[0] / total_contrast, contrasts[1] / total_contrast, contrasts[2] / total_contrast];
+    const total_contrast = contrasts[0] + contrasts[1] + contrasts[2];
+    contrasts = [contrasts[0] / total_contrast, contrasts[1] / total_contrast, contrasts[2] / total_contrast];
 
-  let max_contrast_index = contrasts.indexOf(Math.max(...contrasts));
+    let max_contrast_index = contrasts.indexOf(Math.max(...contrasts));
 
-  invert_pixels = WEIGHED_CONTRAST ? 
-    contrasts[0] * average[0] + contrasts[1] * average[1] +  contrasts[2] * average[2] : 
-    average[max_contrast_index] > 127;
-  
-  for(let i=0; i<width*height*4; i+=4){
-    cropped_photo.pixels[i] = WEIGHED_CONTRAST ? 
-      contrasts[0] * cropped_photo.pixels[i] + contrasts[1] * cropped_photo.pixels[i+1] +  contrasts[2] * cropped_photo.pixels[i+2] : 
-      cropped_photo.pixels[i + max_contrast_index];
+    invert_pixels = WEIGHED_CONTRAST ? 
+      contrasts[0] * average[0] + contrasts[1] * average[1] +  contrasts[2] * average[2] : 
+      average[max_contrast_index] > 127;
+    
+    for(let i=0; i<width*height*4; i+=4){
+      cropped_photo.pixels[i] = WEIGHED_CONTRAST ? 
+        contrasts[0] * cropped_photo.pixels[i] + contrasts[1] * cropped_photo.pixels[i+1] +  contrasts[2] * cropped_photo.pixels[i+2] : 
+        cropped_photo.pixels[i + max_contrast_index];
+    }
+    print(`lowest (r,g,b): ${lowest_pixel}`)
+    print(`highest (r,g,b): ${highest_pixel}`)
+    print(`averages (r,g,b): ${average}`)
+    print(`contrasts (r,g,b): ${contrasts}`)
   }
-  print(`lowest (r,g,b): ${lowest_pixel}`)
-  print(`highest (r,g,b): ${highest_pixel}`)
-  print(`averages (r,g,b): ${average}`)
-  print(`contrasts (r,g,b): ${contrasts}`)
   // -----------TWEAK IMAGE RENDERING------------------
 
   // -----------SHOW MAP SOMETIMES------------------
@@ -297,6 +313,7 @@ function setup_generator_module() {
 
 function draw_generator_module() {
   background(255)
+  noStroke();
   rect(0,0,width,height)
   SHOW_RENDER_MAP ? image(render_map,0,0,width,height) : image(cropped_photo,0,0,width,height);
   background(255,50)
@@ -382,6 +399,23 @@ function draw_generator_module() {
     endShape(CLOSE);
   }
 
+  if(USE_OUTLINE){
+    strokeWeight(2);
+    beginShape()
+    strokeJoin(ROUND)
+    for(let c of satin_outline){
+      vertex(c.x, c.y)
+    }
+    endShape(CLOSE);
+
+    stroke("blue")
+    beginShape()
+    for(let c of outline){
+      vertex(c.x, c.y)
+    }
+    endShape(CLOSE);
+  }
+
   // step all flowers? -> for animation, see live version
 
   // export when all runners & flowers are dead
@@ -406,7 +440,7 @@ function mouseClicked(){
       // 2. make the first one point to the previous point and the 2nd to the next
       let dir_out = ( PI * starting_points_array[i][j].alpha / 180 - 0.5*PI ) % (2*PI); 
       let point_out = p5.Vector.add(pos, p5.Vector.fromAngle(dir_out, 1));
-      if(ptinxypoly(point_out.x, point_out.y, starting_points_array[i])){
+      if(dst.pointInPolygon(point_out.x, point_out.y, starting_points_array[i], true)){
         dir_out = ( dir_out + PI ) % (2*PI); 
       }
 
@@ -464,14 +498,20 @@ function keyPressed(){
 
     if(FILL_TEXT) tendril_coords = tendril_coords.concat(text_fill_coords)
 
-    flowers[0].embroider();
-    print(flowers)
+    if(flowers.length>0) flowers[0].embroider();
     while(flowers.some(f => !f.embroidered)){
       const dist_array = flowers
         .filter(f => !f.embroidered)
         .map(f => f.steps[0].dist(tendril_coords[tendril_coords.length-1]));
       const next_dist = Math.min( ...dist_array );
       flowers.find(f => !f.embroidered && f.steps[0].dist(tendril_coords[tendril_coords.length-1]) <= next_dist).embroider();
+    }
+
+    if(USE_OUTLINE){
+      // maybe this should actually be a convex hull instead of a regular outline. lol
+      outline = dst.computeOutline(tendril_coords.filter((c) => c != "STOP"), 30, 10); // no clue what these should be
+      satin_outline = dst.satinStitch(outline, 3, 20, true); // using default for now
+      tendril_coords = tendril_coords.concat(satin_outline);
     }
 
     let timecode = Date.now()-1749200000000;
@@ -513,8 +553,6 @@ function keyPressed(){
   }
 }
 
-
-
 function sample_nutrient_map(coord){
   if(coord.x < 0 || coord.x > hoop.w || coord.y < 0 || coord.y > hoop.h) {
     return -200;
@@ -522,7 +560,7 @@ function sample_nutrient_map(coord){
 
   //praying this wont kill performance:
   for(const poly of starting_points_array){
-    if(ptinxypoly(coord.x, coord.y, poly)){
+    if(dst.pointInPolygon(coord.x, coord.y, poly, true)){
       // print('bitch ur in my polygon')
       return -200;
     }
@@ -549,7 +587,7 @@ function sample_nutrient_map(coord){
 }
 
 function horizontal_fill(polygon){
-  // we are assumaing a closed polygon which may consist of multiple sections?
+  // we are assumming a closed polygon which may consist of multiple sections?
   let y_start = height, y_end = 0, x_start = width, x_end = 0;
   for(let point of polygon){
    y_start = min(y_start, point.y);
@@ -579,11 +617,11 @@ function horizontal_fill(polygon){
     rows.push([])
     intersections.sort((a,b) => a.x - b.x);
     for(let i=0; i*2<intersections.length; i++){
-      rows[rows.length-1].push();
+      rows[rows.length-1].push([]);
       let left_or_right = (rows.length % 2 == 0) * 2 - 1;
-      if(left_or_right > 0) rows[rows.length-1].push([intersections[i*2]]);
+      if(left_or_right > 0) rows[rows.length-1][i].push(intersections[i*2]);
 
-      let x = (left_or_right > 0 ? intersections[i*2].x : intersections[i*2 + 1] ) + left_or_right * FILL_STEP * (0.5 + random() * 0.5);
+      let x = (left_or_right > 0 ? intersections[i*2].x : intersections[i*2 + 1].x ) + left_or_right * FILL_STEP * (0.5 + random() * 0.5);
       while(left_or_right > 0 ? (x < intersections[i*2 + 1].x - FILL_STEP) : (x > intersections[i*2].x + FILL_STEP)){
         // point(x,y)
         rows[rows.length-1][i].push(createVector(x, y))
@@ -601,45 +639,4 @@ function horizontal_fill(polygon){
     }
   }
   return fill_coords;
-}
-
-// STOLEN HELPER SHIT
-
-//point in polygon
-function ptinxypoly(x, y, poly) {
-  let c = false;
-  for (let l = poly.length, i = 0, j = l-1; i < l; j = i++) {
-      let xj = poly[j].x, yj = poly[j].y, xi = poly[i].x, yi = poly[i].y;
-      let where = (yi - yj) * (x - xi) - (xi - xj) * (y - yi);
-      if (yj < yi) {
-          if (y >= yj && y < yi) {
-              if (where == 0) return true;    // point on the line
-              if (where > 0) {
-                  if (y == yj) {                // ray intersects vertex
-                      if (y > poly[j == 0 ? l-1 : j-1].y) {
-                          c = !c;
-                      }
-                  } else {
-                      c = !c;
-                  }
-              }
-          }
-      } else if (yi < yj) {
-          if (y > yi && y <= yj) {
-              if (where == 0) return true;    // point on the line
-              if (where < 0) {
-                  if (y == yj) {                // ray intersects vertex
-                      if (y < poly[j == 0 ? l-1 : j-1].y) {
-                          c = !c;
-                      }
-                  } else {
-                      c = !c;
-                  }
-              }
-          }
-      } else if (y == yi && (x >= xj && x <= xi || x >= xi && x <= xj)) {
-          return true;     // point on horizontal edge
-      }
-  }
-  return c;
 }

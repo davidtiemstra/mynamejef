@@ -1,12 +1,13 @@
-const x_0 = 160;
-const x_1 = 180;
+const x_0 = 220;
+const x_1 = 240;
 const y_0 = 50;
-const y_1 = 130;
+const y_1 = 160;
 const y_margin = 30;
 
 let input_canvas;
 let uncropped_file_input;
 let cropped_file_input;
+let no_file_input;
 let uncropped_file;
 let cropped_file;
 let hoop_size_input;
@@ -23,6 +24,10 @@ function setup_input_module(){
     cropped_file_input = createFileInput((file) => cropped_file = handle_file(file));
     cropped_file_input.position(x_1, y_0 + y_margin);
     text("Upload cropped photo", x_0, y_0 + y_margin + 5)
+    no_file_input = createSlider(0, 255, 127);
+    no_file_input.position(x_1, y_0 + y_margin*2)
+    no_file_input.size(255);
+    text("Use constant value instead of photo", x_0, y_0 + y_margin*2 + 5)
 
     for(let i=0; i<FABRICS.length; i++){
         fabric_inputs.push(createInput());
@@ -49,14 +54,22 @@ function draw_input_module(){
 }
 
 function finalize_inputs(){
-    if(fabric_inputs.find((i) => i.value() != "" && isNaN(parseFloat(i.value()))) || (!cropped_photo && !uncropped_photo) || !["s", "S", "l", "L"].includes(hoop_size_input.value()[0])) {
+    if(fabric_inputs.find((i) => i.value() != "" && isNaN(parseFloat(i.value()))) || !["s", "S", "l", "L"].includes(hoop_size_input.value()[0])) {
         print("invalid inputs")
         return;
     }
 
+
     fabric_composition = fabric_inputs.map((i) => parseFloat(i.value()));
     hoop_size = hoop_size_input.value()[0].toLowerCase();
     hoop = HOOP[hoop_size];
+
+    if(!cropped_photo && !uncropped_photo){
+        no_photo_mode = true;
+        cropped_photo = createGraphics(hoop.w, hoop.h)
+        cropped_photo.background(no_file_input.value());
+    }
+
     input_phase_done = true;
 }
 
@@ -67,6 +80,7 @@ function destroy_input_module(){
     uncropped_file_input.remove();
     cropped_file_input.remove();
     hoop_size_input.remove();
+    no_file_input.remove();
     for(let fabric_input of fabric_inputs){
         fabric_input.remove()
     }
