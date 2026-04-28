@@ -409,10 +409,250 @@ class dst{
         }
     }
 
-  static pointOnBezier(t, x0, y0, x1, y1, x2, y2, x3, y3){
-    return createVector(
-      (1-t)**3 * x0 + 3*(1-t)**2 * t * x1 + 3*(1-t)*t**2 * x2 + t**3 * x3,
-      (1-t)**3 * y0 + 3*(1-t)**2 * t * y1 + 3*(1-t)*t**2 * y2 + t**3 * y3
-    );
-  }
+    static satinStitch(inputcoords, satindist = 3, satinwidth = 20, fill_corners = false){
+        const satincoords = [];
+        for(let i=0;i<inputcoords.length;i++){
+            const p0 = inputcoords[i], p1 = inputcoords[(i+1)%inputcoords.length];
+            const edge = p5.Vector.sub(p1,p0);
+            const edgeup = p5.Vector.rotate(edge,0.5*PI).setMag(satinwidth*0.5);
+            const edgedown = p5.Vector.rotate(edge,-0.5*PI).setMag(satinwidth*0.5);
+            
+            for(let j=0;j<edge.mag();j+=satindist){
+                const p = p5.Vector.lerp(p0,p1,j/edge.mag());
+                satincoords.push(p5.Vector.add(p,edgeup))
+                satincoords.push(p5.Vector.add(p,edgedown))
+            }
+
+            if(fill_corners){
+                const p2 = inputcoords[(i+2)%inputcoords.length];
+                const edge2 = p5.Vector.sub(p2,p1);
+                const angular_step = satindist / (0.5 * satinwidth);
+                const clockwise = Math.sign(edge.angleBetween(edge2));
+                let start_a = edge.heading() - clockwise * 0.5 * PI
+                let end_a = edge2.heading() - clockwise * 0.5 * PI;
+                if( clockwise * start_a > clockwise * end_a){
+                    end_a += clockwise * 2*PI;
+                }
+                let stps = 0
+                for(let a = start_a; clockwise * a < clockwise * end_a; a += clockwise * angular_step){
+                    stps++
+                    satincoords.push(createVector(p1.x + cos(a) * satinwidth * 0.05, p1.y + sin(a) * satinwidth * 0.05 ));
+                    satincoords.push(createVector(p1.x + cos(a) * satinwidth * 0.5, p1.y + sin(a) * satinwidth * 0.5));
+                }
+                satincoords.push(createVector(p1.x + cos(end_a) * satinwidth * 0.05, p1.y + sin(end_a) * satinwidth * 0.05 ));
+            }
+        }
+        return satincoords;
+    }
+
+    // this was written for and tested on otu. might not work on things with big gaps between stitches.
+    // i tried to make claude do this but he fucking sucked ass at it
+    static computeOutline(coords, offset, resolution){
+        // we just start with a circle, then we find the closest coord and add it until done
+        let circles = coords.slice()
+        let outline = dst.makeCirclePolygon(circles[0], offset, resolution);
+        circles.splice(0,1)
+        
+        while(circles.length > 0){ // already asking for trouble here but whatever
+            //find closest circle
+            let circle_index;
+            for(let p of outline){
+                for(let ci = 0; ci < circles.length; ci++){
+                    if(p.dist(circles[ci]) < offset){
+                        circle_index = ci;
+                        break
+                    }
+                }
+                if(circle_index != null) break;
+            }
+            if(circle_index == null){
+                console.log("couldnt close shape. increase radius");
+                break;
+            }
+            
+            let add_circle = dst.makeCirclePolygon(circles[circle_index], offset, resolution);
+            circles.splice(circle_index, 1);
+            
+            // this is awful and WILL kill performance
+            let outline_purge_coords = [];
+            let circle_purge_coords = [];
+            
+            for(let i=0; i < outline.length; i++){
+                if(dst.pointInPolygon(outline[i].x, outline[i].y, add_circle)) outline_purge_coords.push(i)
+            }
+            if(outline_purge_coords.length == 0) continue;
+            if(dst.findNonCon(outline_purge_coords, outline.length)) continue;
+            
+            for(let i=0; i < add_circle.length; i++){
+                if(dst.pointInPolygon(add_circle[i].x, add_circle[i].y, outline)) circle_purge_coords.push(i)
+            }
+            if(circle_purge_coords.length == 0) continue;
+            if(dst.findNonCon(circle_purge_coords, add_circle.length)) continue;
+            
+
+            // since i generate them all clockwise i think i can just add them together like this
+            outline = dst.unwindBrokenPolygon(outline, outline_purge_coords).concat(dst.unwindBrokenPolygon(add_circle, circle_purge_coords))
+        }
+
+        // purges any parts that accidentally cross into the embroidered area.
+        for(let i=outline.length - 1; i >= 0; i--){
+            for(let j=0; j < coords.length; j++){
+                if(outline[i].dist(coords[j]) > offset*0.8) continue;
+                outline.splice(i, 1);
+                break;
+            }
+        }
+        
+        // this purges any islands that might remain after the previous purge
+        // if i do the intersection purge now then it should actually work 
+        // but what the fuck its already so slow lmao
+        // i had a cheaper method before but it was very unreliable so whatever ig
+        let finding_intersections = true;
+        while(finding_intersections){
+            finding_intersections = false;
+            let last_fucker;
+            for(let i=outline.length - 2; i >= 0; i--){
+                for(let j=0; j < coords.length-1; j++){
+                    if(coords[j].dist(coords[j+1]) > 122 || !dst.findIntersection(outline[i], outline[i+1], coords[j], coords[j+1], false)) continue;
+                    if(!last_fucker){
+                        last_fucker = i;
+                        break;
+                    }
+                    
+                    outline.splice(i+1, last_fucker - i);
+                    finding_intersections = true
+                    break;
+                }
+                if(finding_intersections) break;
+            }
+        }
+        
+        
+        return outline;
+    }
+
+    static makeCirclePolygon(coord, radius, resolution){
+        let poly = [];
+        for(let i=0; i<resolution;i++){
+            const angle = i*2*PI/resolution;
+            poly.push(createVector(coord.x + cos(angle) * radius, coord.y + sin(angle)*radius));
+        }
+
+        return poly
+    }
+    
+    static unwindBrokenPolygon(poly, purge_coords){
+        // so what i want to end up with is two arrays that are like the cut open circle
+        // where the first coord is the one right after the cut and the last one right before it
+        
+        // im assuming right now that the cut will be a consecutive set of coords. 
+        // check if cuts are nonconsecutive with findNonCon
+        
+        let pmin = Math.min(...purge_coords);
+        let pmax = Math.max(...purge_coords)
+        
+        // if the cut already overlaps the edge we can just purge them.
+        if(pmin == 0 || pmax == poly.length - 1){
+            return poly.filter((c, i) => !purge_coords.includes(i));
+        }
+        
+        // otherwise we need to slice it up
+        return poly.slice(pmax + 1, poly.length ).concat(poly.slice(0, pmin))
+    
+    }
+    
+    static findNonCon(indices, init_length){
+        let allow_skip = false;
+        if(Math.min(...indices) == 0 && Math.max(...indices) == init_length - 1) allow_skip = true
+        for(let i=0; i<indices.length-1; i++){
+            if(indices[i] - indices[i+1] != -1) {
+            if(allow_skip) allow_skip = false;
+            else return true
+            }
+        }
+        return false
+    }
+    
+    //point in polygon, stolen.
+    static pointInPolygon(x, y, poly, include_points_on_line = false) {
+        let c = false;
+        for (let l = poly.length, i = 0, j = l-1; i < l; j = i++) {
+            let xj = poly[j].x, yj = poly[j].y, xi = poly[i].x, yi = poly[i].y;
+            let where = (yi - yj) * (x - xi) - (xi - xj) * (y - yi);
+            if (yj < yi) {
+                if (y >= yj && y < yi) {
+                    if (where == 0) return include_points_on_line;    // point on the line
+                    if (where > 0) {
+                        if (y == yj) {                // ray intersects vertex
+                            if (y > poly[j == 0 ? l-1 : j-1].y) {
+                                c = !c;
+                            }
+                        } else {
+                            c = !c;
+                        }
+                    }
+                }
+            } else if (yi < yj) {
+                if (y > yi && y <= yj) {
+                    if (where == 0) return include_points_on_line;    // point on the line
+                    if (where < 0) {
+                        if (y == yj) {                // ray intersects vertex
+                            if (y < poly[j == 0 ? l-1 : j-1].y) {
+                                c = !c;
+                            }
+                        } else {
+                            c = !c;
+                        }
+                    }
+                }
+            } else if (y == yi && (x >= xj && x <= xi || x >= xi && x <= xj)) {
+                return true;     // point on horizontal edge
+            }
+        }
+        return c;
+    }
+
+    static pointOnBezier(t, x0, y0, x1, y1, x2, y2, x3, y3){
+        return createVector(
+            (1-t)**3 * x0 + 3*(1-t)**2 * t * x1 + 3*(1-t)*t**2 * x2 + t**3 * x3,
+            (1-t)**3 * y0 + 3*(1-t)**2 * t * y1 + 3*(1-t)*t**2 * y2 + t**3 * y3
+        );
+    }
+    
+    static findIntersection( p0, p1, p2, p3, return_coord) {
+        // line segment 1 is p0 -> p1, line segment 2 is p2 -> p3
+        // only returns true/false if return_coord is false
+
+        const s10_x = p1.x - p0.x
+        const s10_y = p1.y - p0.y
+        const s32_x = p3.x - p2.x
+        const s32_y = p3.y - p2.y
+
+        const denom = s10_x * s32_y - s32_x * s10_y
+
+        if (denom == 0) { return null } // collinear
+
+        const denom_is_positive = denom > 0
+
+        const s02_x = p0.x - p2.x
+        const s02_y = p0.y - p2.y
+
+        const s_numer = s10_x * s02_y - s10_y * s02_x
+
+        if ((s_numer < 0) == denom_is_positive) { return null } // no collision
+
+        const t_numer = s32_x * s02_y - s32_y * s02_x
+
+        if ((t_numer < 0) == denom_is_positive) { return null } // no collision
+
+        if ((s_numer > denom) == denom_is_positive || (t_numer > denom) == denom_is_positive) { return null } // no collision
+
+        if(!return_coord) return true;
+
+        // collision detected.
+        const t = t_numer / denom
+        const intersection_point = createVector( p0.x + (t * s10_x), p0.y + (t * s10_y) )
+
+        return intersection_point
+    }
 }
