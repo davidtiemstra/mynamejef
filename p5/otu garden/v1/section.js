@@ -6,6 +6,7 @@ class section{
         this.next = null;
         this.previous = previous;
         this.embroidered = false;
+        this.embroidered_under = false;
         this.p0 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, this.thickness*0.5).rotate(0.5*PI));
         this.p1 = p5.Vector.add(this.pos, p5.Vector.fromAngle(this.dir, this.thickness*0.5).rotate(-0.5*PI));
         this.id = sections.length;
@@ -65,6 +66,18 @@ class section{
         if(xi>0) ix_sections[xi-1][yi]?.push(this.id)
         if(yi>0) ix_sections[xi][yi-1]?.push(this.id)
         if(xi>0 && yi>0) ix_sections[xi-1][yi-1]?.push(this.id)
+    }
+
+    embroider_under(){
+        if(this.embroidered_under) return;
+
+        tendril_coords.push(this.pos)
+
+        this.embroidered_under = true;
+
+        if(this.next){
+            sections[this.next].embroider_under();
+        } 
     }
 
     embroider(){

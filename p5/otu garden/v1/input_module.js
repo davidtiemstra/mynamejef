@@ -17,18 +17,15 @@ let fabric_inputs = [];
 
 function setup_input_module(){
     input_canvas = createCanvas(500,500);
-    textAlign(RIGHT, TOP)
     uncropped_file_input = createFileInput((file) => uncropped_file = handle_file(file));
     uncropped_file_input.position(x_1, y_0);
-    text("Upload uncropped photo", x_0, y_0 + 5)
     cropped_file_input = createFileInput((file) => cropped_file = handle_file(file));
     cropped_file_input.position(x_1, y_0 + y_margin);
-    text("Upload cropped photo", x_0, y_0 + y_margin + 5)
-    no_file_input = createSlider(0, 255, 127);
+    
+    no_file_input = createSlider(0, 255, round(COLOR_CONST_DEFAULT * 127));
     no_file_input.position(x_1, y_0 + y_margin*2)
     no_file_input.size(255);
-    text("Use constant value instead of photo", x_0, y_0 + y_margin*2 + 5)
-
+    
     for(let i=0; i<FABRICS.length; i++){
         fabric_inputs.push(createInput());
         fabric_inputs[fabric_inputs.length - 1].position(x_1, y_1 + i*y_margin)
@@ -37,14 +34,24 @@ function setup_input_module(){
 
     hoop_size_input = createInput();
     hoop_size_input.position(x_1, y_1 + (FABRICS.length+1)*y_margin)
-    text("Hoop size (S or L):", x_0, y_1 + (FABRICS.length+1)*y_margin + 5)
-
+    
     next_phase_button = createButton('Continue');
     next_phase_button.position(x_1, y_1 + (FABRICS.length+3)*y_margin)
     next_phase_button.mousePressed(finalize_inputs); 
 }
 
 function draw_input_module(){
+    background(255)
+    textAlign(RIGHT, TOP)
+    text("Upload uncropped photo", x_0, y_0 + 5)
+    text("Upload cropped photo", x_0, y_0 + y_margin + 5)
+    text(`Use constant value ${str(no_file_input.value()/127).slice(0,4)}`, x_0, y_0 + y_margin*2 + 5)
+    text("Hoop size (S or L):", x_0, y_1 + (FABRICS.length+1)*y_margin + 5)
+
+    for(let i=0; i<FABRICS.length; i++){
+        text(`fabric % ${FABRICS[i]}`, x_0, y_1 + i*y_margin + 5)
+    }
+
     if(cropped_file && cropped_file.width > 0 && !cropped_photo){
         cropped_photo = update_image(cropped_file)
     }
@@ -59,7 +66,7 @@ function finalize_inputs(){
         return;
     }
 
-
+    color_multiplier = no_file_input.value() / 127;
     fabric_composition = fabric_inputs.map((i) => parseFloat(i.value()));
     hoop_size = hoop_size_input.value()[0].toLowerCase();
     hoop = HOOP[hoop_size];
