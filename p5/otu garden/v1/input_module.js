@@ -1,8 +1,22 @@
 const x_0 = 220;
 const x_1 = 240;
 const y_0 = 50;
-const y_1 = 160;
+const y_1 = 210;
 const y_margin = 30;
+
+const COL_SQUARE_SIZE = 25;
+const COL_MARGIN = 7;
+const COL_SQUARES_PER_LINE = 6;
+const PICKER_COORDS = {
+    tendril: {
+        x: x_1,
+        y: y_1
+    },
+    detail: {
+        x: x_1,
+        y: y_1 + COL_SQUARE_SIZE + COL_MARGIN
+    }
+}
 
 let input_canvas;
 let uncropped_file_input;
@@ -12,8 +26,11 @@ let uncropped_file;
 let cropped_file;
 let hoop_size_input;
 let next_phase_button;
+let outline_toggle;
+let text_toggle;
 
-let fabric_inputs = [];
+// let fabric_inputs = [];
+let picking_color = "tendril";
 
 function setup_input_module(){
     input_canvas = createCanvas(500,500);
@@ -25,12 +42,18 @@ function setup_input_module(){
     no_file_input = createSlider(0, 255, round(COLOR_CONST_DEFAULT * 127));
     no_file_input.position(x_1, y_0 + y_margin*2)
     no_file_input.size(255);
-    
-    for(let i=0; i<FABRICS.length; i++){
-        fabric_inputs.push(createInput());
-        fabric_inputs[fabric_inputs.length - 1].position(x_1, y_1 + i*y_margin)
-        text(`fabric % ${FABRICS[i]}`, x_0, y_1 + i*y_margin + 5)
-    }
+
+    outline_toggle = createCheckbox("", use_outline);
+    outline_toggle.position(x_1, y_0 + y_margin*3)
+
+    text_toggle = createCheckbox("", use_text);
+    text_toggle.position(x_1, y_0 + y_margin*4)
+
+    // for(let i=0; i<FABRICS.length; i++){
+    //     fabric_inputs.push(createInput());
+    //     fabric_inputs[fabric_inputs.length - 1].position(x_1, y_1 + i*y_margin)
+    //     text(`fabric % ${FABRICS[i]}`, x_0, y_1 + i*y_margin + 5)
+    // }
 
     hoop_size_input = createInput();
     hoop_size_input.position(x_1, y_1 + (FABRICS.length+1)*y_margin)
@@ -43,13 +66,48 @@ function setup_input_module(){
 function draw_input_module(){
     background(255)
     textAlign(RIGHT, TOP)
+
+    noStroke();
+    fill(0);
     text("Upload uncropped photo", x_0, y_0 + 5)
     text("Upload cropped photo", x_0, y_0 + y_margin + 5)
     text(`Use constant value ${str(no_file_input.value()/127).slice(0,4)}`, x_0, y_0 + y_margin*2 + 5)
+    text(`Use outline`, x_0, y_0 + y_margin*3 + 5)
+    text(`Use text logo`, x_0, y_0 + y_margin*4 + 5)
     text("Hoop size (S or L):", x_0, y_1 + (FABRICS.length+1)*y_margin + 5)
 
-    for(let i=0; i<FABRICS.length; i++){
-        text(`fabric % ${FABRICS[i]}`, x_0, y_1 + i*y_margin + 5)
+    text("Tendril color:", x_0, y_1 + 5)
+    text("Detail color:", x_0, y_1 + COL_SQUARE_SIZE + COL_MARGIN + 5)
+
+    // for(let i=0; i<FABRICS.length; i++){
+    //     text(`fabric % ${FABRICS[i]}`, x_0, y_1 + i*y_margin + 5)
+    // }
+
+    textAlign(LEFT, TOP)
+    text(THREAD_COLORS[thread.tendril].id, x_1 + COL_SQUARE_SIZE + COL_MARGIN, y_1 + 5)
+    text(THREAD_COLORS[thread.detail].id, x_1 + COL_SQUARE_SIZE + COL_MARGIN, y_1 + COL_SQUARE_SIZE + COL_MARGIN + 5)
+
+    for(let picker of ["tendril", "detail"]){
+        stroke(picking_color == picker ? "magenta" : 0);
+        fill(THREAD_COLORS[thread[picker]].col)
+        rect(PICKER_COORDS[picker].x, PICKER_COORDS[picker].y, COL_SQUARE_SIZE, COL_SQUARE_SIZE)
+
+        if(mouseIsPressed && mouseX > PICKER_COORDS[picker].x && mouseX < PICKER_COORDS[picker].x + COL_SQUARE_SIZE && mouseY > PICKER_COORDS[picker].y && mouseY < PICKER_COORDS[picker].y +COL_SQUARE_SIZE){
+            picking_color = picker
+        }
+    }
+
+
+    for(let i=0; i<THREAD_COLORS.length; i++){
+        stroke(thread[picking_color] == i ? "magenta" : 0)
+        fill(THREAD_COLORS[i].col)
+        const x = x_1 + (i%COL_SQUARES_PER_LINE) * (COL_SQUARE_SIZE + COL_MARGIN);
+        const y = y_1 + COL_MARGIN + (2 + floor(i/COL_SQUARES_PER_LINE)) * (COL_SQUARE_SIZE + COL_MARGIN)
+        rect(x, y, COL_SQUARE_SIZE, COL_SQUARE_SIZE);
+        
+        if(mouseIsPressed && mouseX > x && mouseX < x + COL_SQUARE_SIZE && mouseY > y && mouseY < y +COL_SQUARE_SIZE){
+            thread[picking_color] = i;
+        }
     }
 
     if(cropped_file && cropped_file.width > 0 && !cropped_photo){
@@ -61,15 +119,19 @@ function draw_input_module(){
 }
 
 function finalize_inputs(){
-    if(fabric_inputs.find((i) => i.value() != "" && isNaN(parseFloat(i.value()))) || !["s", "S", "l", "L"].includes(hoop_size_input.value()[0])) {
+    if(!["s", "S", "l", "L"].includes(hoop_size_input.value()[0])) {
         print("invalid inputs")
         return;
     }
 
+    // fabric_composition = fabric_inputs.map((i) => parseFloat(i.value()));
+    
     color_multiplier = no_file_input.value() / 127;
-    fabric_composition = fabric_inputs.map((i) => parseFloat(i.value()));
     hoop_size = hoop_size_input.value()[0].toLowerCase();
     hoop = HOOP[hoop_size];
+
+    use_outline = outline_toggle.checked();
+    use_text = text_toggle.checked();
 
     if(!cropped_photo && !uncropped_photo){
         no_photo_mode = true;
@@ -88,9 +150,11 @@ function destroy_input_module(){
     cropped_file_input.remove();
     hoop_size_input.remove();
     no_file_input.remove();
-    for(let fabric_input of fabric_inputs){
-        fabric_input.remove()
-    }
+    outline_toggle.remove();
+    text_toggle.remove()
+    // for(let fabric_input of fabric_inputs){
+    //     fabric_input.remove()
+    // }
 }
 
 function handle_file(file_in){

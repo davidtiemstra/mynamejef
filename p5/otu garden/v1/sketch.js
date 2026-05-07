@@ -14,8 +14,8 @@ delft maker faire changes:
   [x] pass variable petal count (based on what?)
   [x] pass flower parameters when instantiating flower
 [x] add outline
-  [ ] double check that its actually bug free now lmao.(its not)
-  [ ] also if possible try to optimize bc my laptop is gonna fucking die from this.
+  [ ] fix the bug where it sometimes only does a small section (or build in a reset)
+  [ ] also if possible try to optimize bc my laptop is gonna fucking die from this -> its kinda okay and the laptop (probably) wont need to do outlines
 [x] generate from little circle -> more points, no convergence
 [x] do a line under the tendrils first to give them more volume
 [ ] get rid of a million jump stitches
@@ -25,9 +25,11 @@ delft maker faire changes:
   [x] have a nutrient slider or smth.
 [x] adjust size to fit in window
 [x] add corner stitches for alignment
-[ ] tweak generation parameters
-[ ] fix adjustable display ratio
+[x] tweak generation parameters
+[ ] fix adjustable display ratio -> ONLY TEXT IS FUCKED RN AND MAYBE PHOTO PROCESSING
 [ ] make the ui pretty
+[x] choose colors from real pallete or randomize
+[x] toggle outline and text at input
 [ ] draw everything to multiple layers
 [x] fix the printout with numbers/variables (and payment?)
 [ ] create multiple mode
@@ -52,23 +54,56 @@ const FABRICS = [
   "synthetic"
 ];
 
+const THREAD_COLORS = [
+  {col: "#1b1a1d", id: "Rayon 1000"},
+  {col: "#807b7b", id: "Rayon 1012"},
+  {col: "#eeeeee", id: "Rayon 1001"},
+  {col: "#b13435", id: "Rayon 1181"},
+  {col: "#bb3439", id: "Rayon 1147"},
+  {col: "#ccbbc5", id: "Rayon 1116"},
+  {col: "#272742", id: "Rayon 1242"},
+  {col: "#2e3270", id: "Rayon 1134"},
+  {col: "#7c7e9f", id: "Rayon 1075"},
+  {col: "#28342e", id: "Rayon 1370"},
+  {col: "#2e4630", id: "Rayon 1051"},
+  {col: "#66805e", id: "Rayon 1248"},
+  {col: "#6b4d25", id: "Rayon 1026"},
+  {col: "#a5752f", id: "Rayon 1024"},
+  {col: "#a7a25f", id: "Rayon 1023"},
+  {col: "#3a241e", id: "Rayon 1145"},
+  {col: "#714428", id: "Rayon 1126"},
+  {col: "#968272", id: "Rayon 1082"},
+  
+  {col: "#aa4f9e", id: "Rayon 1188"},
+  {col: "#cc61ac", id: "Rayon 1310"},
+  {col: "#d58c57", id: "Rayon 1065"},
+  {col: "#d1c38d", id: "M. spark. 24"},
+  {col: "#bb2865", id: "M. spark. 18"},
+  {col: "#c7c1c8", id: "M. spark. 41"},
+];
+
+let thread = {
+  tendril: 0,
+  detail: 2
+};
+
 let phase = 0;
 
 // photo interface stuff
 const DEBUG_PHOTO_NUMBER = 3;
 
-const USE_OUTLINE = true;
-const FILL_TEXT = true;
-const USE_TEXT = false;
+let use_outline = false;
+let use_text = false;
+const COLOR_CONST_DEFAULT = 0.62;
 
+const FILL_TEXT = true;
 const MULTIPLY_WITH_CONST = true;
 const MANUAL_INVERT = true; // set to true to invert color input map, or to false to use automatic map. true is often good for patterns and false for logos.
 const WEIGHED_CONTRAST = true; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
-const DEBUG_COLORS = true;
+const DEBUG_COLORS = false;
 const SHOW_RENDER_MAP = false;
 const FILL_DENSITY = 2;
 const FILL_STEP = 20;
-const COLOR_CONST_DEFAULT = 0.7;
 
 let DEFAULT_SECTIONS_PER_FLOWER = 150; // was 350
 let DEFAULT_FLOWER_SIZE_RATIO = 4.2;
@@ -115,13 +150,14 @@ const FONT_FILENAME = "Flexi_IBM_VGA_False.ttf"
 const TEXT_SPACING = 0.09
 
 const STEP_SIZE = 5; //in DU
-const NUTRIENT_BORDER = 50 + (USE_OUTLINE ? OUTLINE_OFFSET + OUTLINE_WIDTH : 0); // make nutrients falloff near border
+const NUTRIENT_BORDER = 50 + (use_outline ? OUTLINE_OFFSET + OUTLINE_WIDTH : 0); // make nutrients falloff near border
 const BORDER_STEEPNESS = 5;
-const DISPLAY_RATIO = 1;
+
+// let DISPLAY_RATIO = 1;
 
 // display ratios other than 1 do not work rn lol.
-// const DISPLAY_RATIO = 0.4; // real value for pc screen
-// const DISPLAY_RATIO = 0.55; // real value for laptop screen
+// let DISPLAY_RATIO = 0.4; // real value for pc screen
+let DISPLAY_RATIO = 0.55; // real value for laptop screen
 
 // i can tweak these mostly to trade performance for scan resolution
 const MAX_ANGLE_MODIFIER = 0.5;
@@ -234,13 +270,10 @@ function setup_generator_module() {
 
   cropped_photo.loadPixels()
 
-  min_petal_count = 2 + round(random()*MAX_MIN_PETAL_COUNT);
-  flower_attraction = 100 + random() * 100000
-  // flower_attraction = 1000;
-  
+  min_petal_count = 2 + round(random()*MAX_MIN_PETAL_COUNT);  
   flower_dna = Flower.generateUnitDNA();
   const flower_scale_ratio = (0.5 + random()) * (hoop_size == "s" ? 0.6 : 0.8);
-  sections_per_flower = flower_scale_ratio * (DEFAULT_SECTIONS_PER_FLOWER + (USE_TEXT ? 150 + (hoop.font - 228) * 2 : 0));
+  sections_per_flower = flower_scale_ratio * (DEFAULT_SECTIONS_PER_FLOWER + (use_text ? 150 + (hoop.font - 228) * 2 : 0));
   flower_size_ratio = flower_scale_ratio * DEFAULT_FLOWER_SIZE_RATIO * pow(sections_per_flower, 0.4) * 0.08;
 
   createCanvas( 
@@ -310,7 +343,6 @@ function setup_generator_module() {
     for(let x=0; x<width; x++){
       for( let y=0; y<height; y++){
         let val = sample_nutrient_map(createVector(x,y)) * 255
-        // stroke(200)
         render_map.set(x,y,val)
       }
     }
@@ -322,7 +354,7 @@ function setup_generator_module() {
   angleMode(RADIANS);
   
   // get starting runners from text
-  if(USE_TEXT){
+  if(use_text){
     textFont(theFont);
     for(let i=0; i< theText.length; i++){
       text_points.push(theFont.textToPoints(theText[i], 0, 0, hoop.font, {
@@ -354,9 +386,9 @@ function draw_generator_module() {
     // im drawing the text at full resolution now not the sample resolution.
     // u can view sample resultion by uncommenting beginshape/vertex/endshape below.
     noFill();
-    stroke("darkred");
+    stroke(THREAD_COLORS[thread.detail].col);
 
-    if(USE_TEXT){
+    if(use_text){
       starting_points_array = [];
       textSize(hoop.font);
       textAlign(CENTER, CENTER)
@@ -383,8 +415,6 @@ function draw_generator_module() {
   }
 
   // step all runners (non parallel)
-  // noStroke();
-  // strokeWeight(1)
   for(const runner of runners){
     if(runner.live) runner.scan();
   }
@@ -392,43 +422,44 @@ function draw_generator_module() {
   tendril_graphics.noFill();
   tendril_graphics.strokeWeight(2);
 
-  tendril_graphics.stroke("darkgreen");
+  stroke(THREAD_COLORS[thread.tendril].col);
+  tendril_graphics.stroke(THREAD_COLORS[thread.tendril].col);
   for(const runner of runners){
     if(runner.live) runner.step();
   }
 
   image(tendril_graphics, 0, 0, width, height)
   
-  stroke("darkred");
+  stroke(THREAD_COLORS[thread.detail].col);
   strokeWeight(2);
   for(const flower of flowers){
     flower.drawFlower();
   }
 
-  if(FILL_TEXT && USE_TEXT){
+  if(FILL_TEXT && use_text){
     strokeWeight(2);
     beginShape();
     for(let c of text_fill_coords){
-      vertex(c.x, c.y)
+      vertex(c.x * DISPLAY_RATIO, c.y * DISPLAY_RATIO)
     }
     endShape(CLOSE);
   }
 
-  if(USE_OUTLINE){
+  if(use_outline){
     strokeWeight(2);
     beginShape()
     strokeJoin(ROUND)
     for(let c of satin_outline){
-      vertex(c.x, c.y)
+      vertex(c.x * DISPLAY_RATIO, c.y * DISPLAY_RATIO)
     }
     endShape(CLOSE);
 
-    stroke("blue")
-    beginShape()
-    for(let c of outline){
-      vertex(c.x, c.y)
-    }
-    endShape(CLOSE);
+    // stroke("blue")
+    // beginShape()
+    // for(let c of outline){
+    //   vertex(c.x, c.y)
+    // }
+    // endShape(CLOSE);
   }
 
   // step all flowers? -> for animation, see live version
@@ -566,7 +597,7 @@ function keyPressed(){
     
     tendril_coords.push("STOP")
 
-    if(FILL_TEXT && USE_TEXT) tendril_coords = tendril_coords.concat(text_fill_coords)
+    if(FILL_TEXT && use_text) tendril_coords = tendril_coords.concat(text_fill_coords)
 
     if(flowers.length>0) flowers[0].embroider();
     while(flowers.some(f => !f.embroidered)){
@@ -578,10 +609,10 @@ function keyPressed(){
     }
     
     // purge coords too close to the border or outside it
-    const mrgn = USE_OUTLINE ? OUTLINE_WIDTH + OUTLINE_OFFSET : 0;
+    const mrgn = use_outline ? OUTLINE_WIDTH + OUTLINE_OFFSET : 0;
     tendril_coords = tendril_coords.filter(c => c == "STOP" || (c.x > mrgn && c.x < hoop.w - mrgn && c.y > mrgn && c.y < hoop.h - mrgn));
 
-    if(USE_OUTLINE){
+    if(use_outline){
 
       // maybe this should actually be a convex hull instead of a regular outline. lol. nah whatever this looks good as fuck
       outline = dst.computeOutline(tendril_coords.filter((c) => c != "STOP"), OUTLINE_OFFSET, 10); // no clue what these should be
@@ -599,21 +630,6 @@ function keyPressed(){
     ])
 
     let timecode = Date.now()-1749200000000;
-    let params = `let INTERSECTION_PENALTY = ${INTERSECTION_PENALTY};
-    let SUSTENANCE_LEVEL = ${SUSTENANCE_LEVEL}; // amount of nutrients a tendril needs to break even
-    let THICKNESS_MODIFIER = ${THICKNESS_MODIFIER}; // multiply by nutrient surplus to get difference in thickness
-    let MINIMUM_THICKNESS = ${MINIMUM_THICKNESS};
-    let START_THICKNESS = ${START_THICKNESS};
-    let MAX_CONVERGE_DISTANCE = ${MAX_CONVERGE_DISTANCE};
-    let MINIMUM_NUTRIENTS = ${MINIMUM_NUTRIENTS} // if theres nothing above this try to converge. remember its linked to amount of scan steps
-    const DIVERGENCE_MINIMUM_THICKNESS = ${DIVERGENCE_MINIMUM_THICKNESS};
-    const DIVERGENCE_MINIMUM_NUTRIENTS = ${DIVERGENCE_MINIMUM_NUTRIENTS};
-    let sections_per_flower = ${sections_per_flower};
-    let flower_size_ratio = ${flower_size_ratio};
-    let NOISE_OCTAVES = ${NOISE_OCTAVES};
-    let NOISE_FALLOFF = ${NOISE_FALLOFF};
-    let NOISE_SCALE = ${NOISE_SCALE};`;
-    save([params], `otu_${timecode}.txt`)
     dst.export(tendril_coords,`otu_${timecode}`)
 
     save_receipt(timecode);
@@ -652,27 +668,44 @@ function save_receipt(timecode){
 
     const receipt_image = createGraphics(200, 200 * hoop.h/hoop.w);
     receipt_image.background(255)
-    receipt_image.image(tendril_graphics, 0, 0, 200, 200 *  hoop.h/hoop.w)
+    
     receipt_image.stroke(0);
     receipt_image.strokeWeight(1);
     receipt_image.noFill();
     for(let flower of flowers){
       receipt_image.beginShape();
       for(let s of flower.steps){
-        receipt_image.vertex(s.x *receipt_image.width / width, s.y *receipt_image.height / height)
+        receipt_image.vertex(s.x *receipt_image.width / hoop.w, s.y *receipt_image.height / hoop.h)
 
       }
       receipt_image.endShape();
     }
+
+    for(let section of sections){
+      receipt_image.line(
+        section.p0.x * receipt_image.width / hoop.w,
+        section.p0.y * receipt_image.height / hoop.h,
+        section.p1.x * receipt_image.width / hoop.w,
+        section.p1.y * receipt_image.height / hoop.h
+      )
+    }
+  
     receipt_image.strokeJoin(ROUND)
     receipt_image.beginShape()
-    print(satin_outline)
     for(let c of satin_outline){
-      receipt_image.vertex(c.x *receipt_image.width / width, c.y *receipt_image.height / height)
+      receipt_image.vertex(c.x *receipt_image.width / hoop.w, c.y * receipt_image.height / hoop.h)
     }
-    receipt_image.endShape(CLOSE);
-    // receipt_image.rect(0.5,1.5,receipt_image.width-2,receipt_image.height-3.5)
-    receipt_image.filter(THRESHOLD)
+    receipt_image.endShape();
+    
+    receipt_image.strokeWeight(2);
+    receipt_image.stroke(255)
+    receipt_image.beginShape()
+    for(let c of text_fill_coords){
+      vertex(c.x * receipt_image.width / hoop.w, c.y * receipt_image.height / hoop.h)
+    }
+    receipt_image.endShape();
+    
+    // receipt_image.filter(THRESHOLD, 0.01)
     const img = receipt_image.elt.toDataURL("image/JPEG", 1.0);
     doc.text(
       [
@@ -687,9 +720,13 @@ function save_receipt(timecode){
       [
         `noise_seed: ${noise_seed}`,
         `hoop_size: ${hoop_size.toUpperCase()}`,
+        `tendril_color: ${THREAD_COLORS[thread.tendril].id}`,
+        `detail_color: ${THREAD_COLORS[thread.detail].id}`,
         `start_coord: {${mouse_clicked.x}, ${mouse_clicked.y}}`,
         `image_input: ${filename}`,
         `nutrient_modifier: ${str(color_multiplier).slice(0,5)}`,
+        `use_outline: ${use_outline ? "yes" : "no"}`,
+        `use_text: ${use_text ? "yes" : "no"}`,
         "", "", "---"
       ],
       0,
@@ -723,14 +760,15 @@ function sample_nutrient_map(coord){
   photo_sample = sin(photo_sample * PI * 0.5 + 1.5 * PI) + 1 // this increases contrast but maybe i dont need that actually
   if(invert_pixels) photo_sample = 2.0 - photo_sample;
 
-  let noise_sample = 0.1 + 0.8 * noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE)
+  const noise_sample = 0.1 + 0.8 * noise(coord.x * NOISE_SCALE, coord.y * NOISE_SCALE)
 
-  let multiplier = MULTIPLY_WITH_CONST ? color_multiplier : 1.0;
+  const multiplier = MULTIPLY_WITH_CONST ? color_multiplier : 1.0;
 
   if(isNaN(photo_sample)){
     debugger;
   }
 
+  // return (0.2 * noise_sample + 0.8 * photo_sample) * falloff * multiplier;
   return noise_sample * falloff * photo_sample * multiplier;
 }
 

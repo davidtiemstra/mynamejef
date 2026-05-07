@@ -186,24 +186,12 @@ class runner {
             flower_dna, // unit profile
         );
         flowers.push(flower);
-
-        // print(`flower depth: ${depth}`)
-        // const flower = {
-        //     pos: this.pos,
-        //     radius: total_thickness*flower_size_ratio/15,
-        //     noise: runners.filter(r => r.live).length
-        // }
-        // flowers.push(flower)
-        // stroke("pink")
-        // strokeWeight(4);
-        // circle(flower.pos.x*DISPLAY_RATIO, flower.pos.y*DISPLAY_RATIO, flower.radius)
-        // strokeWeight(1);
     }
 
     if(DEBUG_COLORS) tendril_graphics.stroke(0,(this.last_consumption - SUSTENANCE_LEVEL)* 255, (SUSTENANCE_LEVEL - this.last_consumption) * 255);
     sections.push(new section(this.pos.copy(), this.dir, this.thickness, this.last_sections[0] ?? null ));
 
-    let p0;
+    let p0; // clearly something is going wrong here. no clue why i added this.
     for(const section of this.last_sections){
         sections[section].next = sections.length-1;
         p0 = sections[section].p1;
@@ -329,40 +317,6 @@ class runner {
         partner.converging = true;
         partner.converge_partner = this.id;
         partner.converge_complete = false;
-
-        // --------- vvv CONVERGENCE DEBUGGING LINES vvv ----------
-
-        // fill("green")
-        // noStroke();
-        // text(this.id, 
-        //     DISPLAY_RATIO * check_pos.x, 
-        //     DISPLAY_RATIO * check_pos.y)
-
-        // noFill()
-        // stroke("green")
-
-        // beginShape();
-        // for(const pos of this.converge_path){
-        //     vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
-        // }
-        // endShape()
-
-        // beginShape();
-        // for(const pos of partner.converge_path){
-        //     vertex(DISPLAY_RATIO *pos.x,DISPLAY_RATIO *pos.y)
-        // }
-        // endShape()
-
-        // const pdir = p5.Vector.add(check_pos, p5.Vector.fromAngle(avg_dir, 10))
-        // line(
-        //     DISPLAY_RATIO * pdir.x, 
-        //     DISPLAY_RATIO * pdir.y, 
-        //     DISPLAY_RATIO * check_pos.x, 
-        //     DISPLAY_RATIO * check_pos.y)
-
-
-        // --------- ^^^ CONVERGENCE DEBUGGING LINES ^^^ ----------
-
     } else{
         this.converge_path = [];
         partner.converge_path = [];
