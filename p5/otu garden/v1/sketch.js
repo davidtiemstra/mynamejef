@@ -18,6 +18,7 @@ delft maker faire changes:
   [ ] also if possible try to optimize bc my laptop is gonna fucking die from this.
 [x] generate from little circle -> more points, no convergence
 [x] do a line under the tendrils first to give them more volume
+[ ] get rid of a million jump stitches
 [ ] purge tendril sections that are covered by flowers from dst export
   [x] maybe also purge sooooome of the tendril sections overlapping with eachother
 [x] add a generate without picture button (i.e. classic mode)
@@ -27,11 +28,9 @@ delft maker faire changes:
 [ ] tweak generation parameters
 [ ] fix adjustable display ratio
 [ ] make the ui pretty
-
-old todo/versions:
-[?] the fucking dst export misalignment (its not failing now so like fucking whatever?)
-[?] give them a little point when they die so its more like tendrils and less like worms
-  - idk how i feel about the little point actually maybe theres a better way to do it.
+[ ] draw everything to multiple layers
+[x] fix the printout with numbers/variables (and payment?)
+[ ] create multiple mode
 */
 
 
@@ -60,18 +59,18 @@ const DEBUG_PHOTO_NUMBER = 3;
 
 const USE_OUTLINE = true;
 const FILL_TEXT = true;
-const USE_TEXT = true;
+const USE_TEXT = false;
 
 const MULTIPLY_WITH_CONST = true;
-const MANUAL_INVERT = false; // set to true to invert color input map, or to false to use automatic map
-const WEIGHED_CONTRAST = false; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
+const MANUAL_INVERT = true; // set to true to invert color input map, or to false to use automatic map. true is often good for patterns and false for logos.
+const WEIGHED_CONTRAST = true; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
 const DEBUG_COLORS = true;
 const SHOW_RENDER_MAP = false;
 const FILL_DENSITY = 2;
 const FILL_STEP = 20;
-const COLOR_CONST_DEFAULT = 1.0;
+const COLOR_CONST_DEFAULT = 0.7;
 
-let DEFAULT_SECTIONS_PER_FLOWER = 150 + (USE_TEXT ? 200 : 0); // was 350
+let DEFAULT_SECTIONS_PER_FLOWER = 150; // was 350
 let DEFAULT_FLOWER_SIZE_RATIO = 4.2;
 
 const OUTLINE_WIDTH = 30;
@@ -113,10 +112,9 @@ const FLOWER_ITERATION_OFFSET = 0.05;
 // Selected font and text
 let theText = 'otu';
 const FONT_FILENAME = "Flexi_IBM_VGA_False.ttf"
-const TEXT_SAMPLE_FACTOR = 0.03;
 const TEXT_SPACING = 0.09
 
-const STEP_SIZE = 6; //in DU
+const STEP_SIZE = 5; //in DU
 const NUTRIENT_BORDER = 50 + (USE_OUTLINE ? OUTLINE_OFFSET + OUTLINE_WIDTH : 0); // make nutrients falloff near border
 const BORDER_STEEPNESS = 5;
 const DISPLAY_RATIO = 1;
@@ -166,6 +164,8 @@ let text_angle = 0;
 
 let invert_pixels = false;
 let render_map;
+let noise_seed;
+let mouse_clicked;
 
 // hoop sizes expressed in du ( dst units: 1du = 0.1mm)
 // these are from the manual. supposedly if we stay within that range they should read but needs testing.
@@ -173,12 +173,16 @@ const HOOP = {
   s:{
     w: 1000,
     h: 1000,
-    font: 192
+    font: 204,
+    sample_factor: 0.012
   },
   l:{
     w:1300,
     h:1800,
-    font: 324
+    font: 292,
+    sample_factor: 0.02
+    // font: 228,
+    // sample_factor: 0.016
   }
 }
 let hoop;
@@ -220,7 +224,7 @@ function draw() {
 }
 
 function setup_generator_module() {
-  const noise_seed = round(random()*10000);
+  noise_seed = round(random()*10000);
   print(`seed: ${noise_seed}`);
   noiseSeed(noise_seed);
   randomSeed(noise_seed);
@@ -235,9 +239,9 @@ function setup_generator_module() {
   // flower_attraction = 1000;
   
   flower_dna = Flower.generateUnitDNA();
-  const flower_scale_ratio = (0.5 + random()) * (hoop_size == "s" ? 0.6 : 1.0);
-  sections_per_flower = DEFAULT_SECTIONS_PER_FLOWER;
-  flower_size_ratio = DEFAULT_FLOWER_SIZE_RATIO;
+  const flower_scale_ratio = (0.5 + random()) * (hoop_size == "s" ? 0.6 : 0.8);
+  sections_per_flower = flower_scale_ratio * (DEFAULT_SECTIONS_PER_FLOWER + (USE_TEXT ? 150 + (hoop.font - 228) * 2 : 0));
+  flower_size_ratio = flower_scale_ratio * DEFAULT_FLOWER_SIZE_RATIO * pow(sections_per_flower, 0.4) * 0.08;
 
   createCanvas( 
     ceil(DISPLAY_RATIO * hoop.w), 
@@ -322,7 +326,7 @@ function setup_generator_module() {
     textFont(theFont);
     for(let i=0; i< theText.length; i++){
       text_points.push(theFont.textToPoints(theText[i], 0, 0, hoop.font, {
-        sampleFactor: TEXT_SAMPLE_FACTOR,  // Increase this value for higher resolution
+        sampleFactor: hoop.sample_factor,  // Increase this value for higher resolution
         simplifyThreshold: 0  // You can adjust this to smooth out the points -> i think it removes colinear points which sucks
       }));
     }
@@ -361,26 +365,7 @@ function draw_generator_module() {
       rotate(text_angle)
       text(theText,0,0);
       pop();
-      textSize(11);
-
-      let x_cursor = 0;
-      for(let i=0; i< text_points.length; i++){
-        starting_points_array.push([]);
-        for(let j=0; j<text_points[i].length; j += 1){
-          // also rotate text.
-          let text_point = createVector(
-            text_points[i][j].x + x_cursor - textWidth(theText) * hoop.font * 0.045, 
-            text_points[i][j].y + hoop.font * 0.38);
-          text_point.rotate(text_angle);
-          
-          starting_points_array[i].push( { 
-            x: text_point.x + mouseX / DISPLAY_RATIO , 
-            y: text_point.y + mouseY / DISPLAY_RATIO,
-            alpha: text_points[i][j].alpha
-          } );
-        }
-        x_cursor +=  hoop.font * TEXT_SPACING * textWidth(theText[i]);
-      }
+      starting_points_array = text_to_points(text_points);
     } else{
       starting_points_array = [[]];
       beginShape();
@@ -457,10 +442,23 @@ function mouseClicked(){
   if(phase != 2) return;
   if(runners.length > 0) return
 
-  print(`mouse clicked at X:${mouseX}, Y:${mouseY}`)
+  mouse_clicked = createVector(mouseX, mouseY);
+  print(`mouse clicked at X:${mouseX}, Y:${mouseY}`);
+
+  
+  let fillable_text_points = [];
+  for(let i=0; i< theText.length; i++){
+    fillable_text_points.push(theFont.textToPoints(theText[i], 0, 0, hoop.font, {
+      sampleFactor: 0.1,  // Increase this value for higher resolution
+      simplifyThreshold: 0  // You can adjust this to smooth out the points -> i think it removes colinear points which sucks
+    }));
+  }
+  fillable_text_points = text_to_points(fillable_text_points);
+  for(let character of fillable_text_points){
+    text_fill_coords = text_fill_coords.concat(horizontal_fill(character));
+  }
 
   for(let i=0; i<starting_points_array.length; i++){
-    text_fill_coords = text_fill_coords.concat(horizontal_fill(starting_points_array[i]));
 
     let first_runner_index = null;
     for(let j=0; j<starting_points_array[i].length; j++){
@@ -550,7 +548,8 @@ function keyPressed(){
 
     let purges = 0
     // purge sections with too much overlap. i think its filtering way too much now
-    for(let i = tendril_coords.length-2; i > 0; i--){
+    // iteration order matters here. i think i wanna purge from the bottom up so the running stitches get taken down first since theyre the least important ones
+    for(let i = 0; i < tendril_coords.length-1; i++){
       let intersections = 0;
       for(let j=0; j<tendril_coords.length-1; j++){
         if(i==j || i + 1 == j || i - j == 1 || i + 1 >= tendril_coords.length || tendril_coords[i].dist(tendril_coords[i+1]) > 100) continue;
@@ -558,6 +557,7 @@ function keyPressed(){
         if(intersections > 12){
           purges++
           tendril_coords.splice(i,2) // i think we throw out 2 coords. we gotta otherwise we create a worse thing.
+          i--;
           break;
         }
       }
@@ -615,6 +615,8 @@ function keyPressed(){
     let NOISE_SCALE = ${NOISE_SCALE};`;
     save([params], `otu_${timecode}.txt`)
     dst.export(tendril_coords,`otu_${timecode}`)
+
+    save_receipt(timecode);
   }
   if(key === 'r' || key === 'R'){
     print(runners)
@@ -628,13 +630,73 @@ function keyPressed(){
   if(key === 'n' || key === 'N'){
     draw()
   }
-  if(key === 'p' || key === 'P'){
+  if(key === ' '){
     if(isLooping()){
       noLoop()
     } else{
       loop()
     }
   }
+}
+
+function save_receipt(timecode){
+    const doc = new jsPDF({
+      orientation: 'p',
+      unit: 'mm',
+      format: [136.0, 400.0] //ts make no sense to me
+      // format: [58.0, 58.0]
+    });
+    print(doc.getFontList())
+    doc.setFont("Courier", '')
+    doc.setFontSize(8)
+
+    const receipt_image = createGraphics(200, 200 * hoop.h/hoop.w);
+    receipt_image.background(255)
+    receipt_image.image(tendril_graphics, 0, 0, 200, 200 *  hoop.h/hoop.w)
+    receipt_image.stroke(0);
+    receipt_image.strokeWeight(1);
+    receipt_image.noFill();
+    for(let flower of flowers){
+      receipt_image.beginShape();
+      for(let s of flower.steps){
+        receipt_image.vertex(s.x *receipt_image.width / width, s.y *receipt_image.height / height)
+
+      }
+      receipt_image.endShape();
+    }
+    receipt_image.strokeJoin(ROUND)
+    receipt_image.beginShape()
+    print(satin_outline)
+    for(let c of satin_outline){
+      receipt_image.vertex(c.x *receipt_image.width / width, c.y *receipt_image.height / height)
+    }
+    receipt_image.endShape(CLOSE);
+    // receipt_image.rect(0.5,1.5,receipt_image.width-2,receipt_image.height-3.5)
+    receipt_image.filter(THRESHOLD)
+    const img = receipt_image.elt.toDataURL("image/JPEG", 1.0);
+    doc.text(
+      [
+        "---",
+        `otu_${timecode}`,
+      ],
+      0,
+      4
+    )
+    doc.addImage(img, "JPEG", 0, 9, 48, 48 * hoop.h/hoop.w);
+    doc.text(
+      [
+        `noise_seed: ${noise_seed}`,
+        `hoop_size: ${hoop_size.toUpperCase()}`,
+        `start_coord: {${mouse_clicked.x}, ${mouse_clicked.y}}`,
+        `image_input: ${filename}`,
+        `nutrient_modifier: ${str(color_multiplier).slice(0,5)}`,
+        "", "", "---"
+      ],
+      0,
+      48 * hoop.h/hoop.w + 16
+    )
+
+    doc.save(`otu_${timecode}.pdf`);
 }
 
 function sample_nutrient_map(coord){
@@ -670,6 +732,31 @@ function sample_nutrient_map(coord){
   }
 
   return noise_sample * falloff * photo_sample * multiplier;
+}
+
+function text_to_points(text_points_in){
+  textSize(11);
+  let points_out = []
+  let x_cursor = 0;
+  for(let i=0; i< text_points_in.length; i++){
+    points_out.push([]);
+
+    for(let j=0; j<text_points_in[i].length; j += 1){
+      // also rotate text.
+      let text_point = createVector(
+        text_points_in[i][j].x + x_cursor - textWidth(theText) * hoop.font * 0.045, 
+        text_points_in[i][j].y + hoop.font * 0.38);
+      text_point.rotate(text_angle);
+      
+      points_out[i].push( { 
+        x: text_point.x + mouseX / DISPLAY_RATIO , 
+        y: text_point.y + mouseY / DISPLAY_RATIO,
+        alpha: text_points_in[i][j].alpha
+      } );
+    }
+    x_cursor +=  hoop.font * TEXT_SPACING * textWidth(theText[i]);
+  }
+  return points_out;
 }
 
 function horizontal_fill(polygon){

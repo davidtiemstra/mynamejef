@@ -4,30 +4,30 @@
 
 - **algoritmes updaten**
 	- bloemen 
-		- [ ] interessantere variatie
-		- [ ] meer fill?
+		- [x] interessantere variatie
+		- [x] meer fill?
 		- [ ] stof blend compositie
 	- tendrils
-		- [ ] betrouwbaardere generatie
-		- [ ] andere bloem inputs
-		- [ ] gebruik foto als nutrient map
+		- [x] betrouwbaardere generatie
+		- [x] andere bloem inputs
+		- [x] gebruik foto als nutrient map
 			- process foto
 
 - materiaal inslaan -> bestel online
-	- [ ] garen kleuren
-	- [ ] reserve naalden
-	- [ ] cutaway stabilizer
-	- [ ] tearaway stabilizer
+	- [x] garen kleuren
+	- [x] reserve naalden
+	- [x] cutaway stabilizer
+	- [x] tearaway stabilizer
 
 ---
 **week 2 (27/04 - 03/05)**
 
 - **interface maken**
 	- [ ] web hosten
-	- [ ] foto uploaden
-	- [ ] stof blend input
-	- [ ] genereer otu
-	- [ ] ophaalbon
+	- [x] foto uploaden
+	- [x] stof blend input
+	- [x] genereer otu
+	- [ ] ophaalbon -> crtl p printer
 
 - **verkoop**
 	- [ ] patches maken
@@ -45,8 +45,22 @@
 ---
 **week 3 (04/05 - 07/05) (4 dagen)**
 
+
 - branding 
 	- [ ] insta posts
 	- [ ] kleine zine die het concept uitlegt -> alternatief visitekaartje
+- pieces
+
+|                        | aantal | prijs |
+| ---------------------- | ------ | ----- |
+| **patches**            |        |       |
+| groot                  | 8      | 20    |
+| klein                  | 20     | 10    |
+| **kleding**            |        |       |
+| shirts voor mij en sem | 2      | /     |
+| ???                    | 3      |       |
+| **kussens**            |        |       |
+| custom                 | 3      | 50    |
+
 
 whatever nog niet af is

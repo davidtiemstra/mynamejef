@@ -6,20 +6,20 @@
 planning volgende stappen:
 - **algoritmes updaten**
 	- bloemen
-		- [ ] interessantere variatie
-		- [ ] meer fill?
+		- [x] interessantere variatie
+		- [x] meer fill?
 		- [ ] stof blend compositie
 	- tendrils
-		- [ ] betrouwbaardere generatie
-		- [ ] andere bloem inputs
-		- [ ] gebruik foto als nutrient map
+		- [x] betrouwbaardere generatie
+		- [x] andere bloem inputs
+		- [x] gebruik foto als nutrient map
 			- process foto
 		- [ ] ~~copy genomes~~ -> latere iteratie
 - **interface maken**
 	- [ ] web hosten
-	- [ ] foto uploaden
-	- [ ] stof blend input
-	- [ ] genereer otu
+	- [x] foto uploaden
+	- [x] stof blend input
+	- [x] genereer otu
 	- [ ] ophaalbon
 - **verkoop**
 	- [ ] patches maken

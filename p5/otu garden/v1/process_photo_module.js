@@ -113,7 +113,8 @@ function get_photo_map(){
         (hoop.w - photo_graphics.width)*0.5, 
         (hoop.h - photo_graphics.height)*0.5,
         photo_graphics.width, photo_graphics.height);
-    g.save(`CROPPED_${hoop_size.toUpperCase()}_${filename}`) // so u dont gotaa recrop it
+    filename = `CROPPED_${hoop_size.toUpperCase()}_${filename}`
+    g.save(filename) // so u dont gotaa recrop it
     cropped_photo = g;
 }
 
