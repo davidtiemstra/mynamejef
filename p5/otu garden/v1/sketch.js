@@ -26,7 +26,7 @@ delft maker faire changes:
 [x] adjust size to fit in window
 [x] add corner stitches for alignment
 [x] tweak generation parameters
-[ ] fix adjustable display ratio -> ONLY TEXT IS FUCKED RN AND MAYBE PHOTO PROCESSING
+[x] fix adjustable display ratio -> ONLY TEXT IS FUCKED RN AND MAYBE PHOTO PROCESSING
 [ ] make the ui pretty
 [x] choose colors from real pallete or randomize
 [x] toggle outline and text at input
@@ -102,6 +102,7 @@ const MANUAL_INVERT = true; // set to true to invert color input map, or to fals
 const WEIGHED_CONTRAST = true; // if true this combines the nutrient value based on the relative contrasts of the color channels (r,g,b), if false it only samples the channel with the highest contrast
 const DEBUG_COLORS = false;
 const SHOW_RENDER_MAP = false;
+const EMBROIDER_UNDER_SATIN = false;
 const FILL_DENSITY = 2;
 const FILL_STEP = 20;
 
@@ -157,7 +158,7 @@ const BORDER_STEEPNESS = 5;
 
 // display ratios other than 1 do not work rn lol.
 // let DISPLAY_RATIO = 0.4; // real value for pc screen
-let DISPLAY_RATIO = 0.55; // real value for laptop screen
+// let DISPLAY_RATIO = 0.55; // real value for laptop screen
 
 // i can tweak these mostly to trade performance for scan resolution
 const MAX_ANGLE_MODIFIER = 0.5;
@@ -276,10 +277,12 @@ function setup_generator_module() {
   sections_per_flower = flower_scale_ratio * (DEFAULT_SECTIONS_PER_FLOWER + (use_text ? 150 + (hoop.font - 228) * 2 : 0));
   flower_size_ratio = flower_scale_ratio * DEFAULT_FLOWER_SIZE_RATIO * pow(sections_per_flower, 0.4) * 0.08;
 
-  createCanvas( 
+  DISPLAY_RATIO = min((windowWidth-10) / hoop.w, (windowHeight-10) / hoop.h)
+  const canv = createCanvas( 
     ceil(DISPLAY_RATIO * hoop.w), 
     ceil(DISPLAY_RATIO * hoop.h) 
   );
+  canv.elt.style.margin = 'auto';
   tendril_graphics = createGraphics(width, height)
 
   // fill section index for performance.
@@ -342,7 +345,7 @@ function setup_generator_module() {
     render_map.loadPixels();
     for(let x=0; x<width; x++){
       for( let y=0; y<height; y++){
-        let val = sample_nutrient_map(createVector(x,y)) * 255
+        let val = sample_nutrient_map(createVector(x / DISPLAY_RATIO,y / DISPLAY_RATIO)) * 255
         render_map.set(x,y,val)
       }
     }
@@ -381,19 +384,20 @@ function draw_generator_module() {
     
     strokeWeight(3)
     rect(0,0,width,height)
-    strokeWeight(1)
+    strokeWeight(2)
 
     // im drawing the text at full resolution now not the sample resolution.
     // u can view sample resultion by uncommenting beginshape/vertex/endshape below.
     noFill();
-    stroke(THREAD_COLORS[thread.detail].col);
+    stroke(THREAD_COLORS[thread.tendril].col);
 
     if(use_text){
       starting_points_array = [];
       textSize(hoop.font);
       textAlign(CENTER, CENTER)
       push();
-      translate( mouseX / DISPLAY_RATIO , mouseY / DISPLAY_RATIO)
+      translate( mouseX , mouseY)
+      scale(DISPLAY_RATIO)
       rotate(text_angle)
       text(theText,0,0);
       pop();
@@ -544,29 +548,31 @@ function keyPressed(){
     
     //first i do the little line under it. to limit jumps i make them run back and forth
     // and im not doing it in a pretty way rn. thats why all the coords buffer stuff
-    let coords_buffer = [];
-    sections[0].embroider_under();
-    while(sections.some(s => !s.embroidered_under)){
+    if(EMBROIDER_UNDER_SATIN){
+      let coords_buffer = [];
+      sections[0].embroider_under();
+      while(sections.some(s => !s.embroidered_under)){
+        coords_buffer = coords_buffer.concat(tendril_coords);
+        coords_buffer = coords_buffer.concat(tendril_coords.reverse());
+        tendril_coords = [];
+        const dist_array = sections
+          .filter(s => !s.embroidered_under)
+          .map(s => s.pos.dist(coords_buffer[coords_buffer.length-1]));
+        const next_dist = Math.min( ...dist_array );
+        sections.find(s => !s.embroidered_under && s.pos.dist(coords_buffer[coords_buffer.length-1]) <= next_dist).embroider_under();
+      }
       coords_buffer = coords_buffer.concat(tendril_coords);
       coords_buffer = coords_buffer.concat(tendril_coords.reverse());
-      tendril_coords = [];
-      const dist_array = sections
-        .filter(s => !s.embroidered_under)
-        .map(s => s.pos.dist(coords_buffer[coords_buffer.length-1]));
-      const next_dist = Math.min( ...dist_array );
-      sections.find(s => !s.embroidered_under && s.pos.dist(coords_buffer[coords_buffer.length-1]) <= next_dist).embroider_under();
+      tendril_coords = [coords_buffer[0]];
+      
+      // now simplify array to flower step size. (which ive decided is leading on running stitch length)
+      for(let i=1; i<coords_buffer.length-1;i++){
+        if(tendril_coords[tendril_coords.length-1].dist(coords_buffer[i]) > FLOWER_STEP_SIZE ||
+            abs(p5.Vector.sub(coords_buffer[i], tendril_coords[tendril_coords.length-1]).angleBetween(p5.Vector.sub(coords_buffer[i+1], coords_buffer[i]))) > 0.5 * PI
+        ) tendril_coords.push(coords_buffer[i])
+      }
+      tendril_coords.push(coords_buffer[coords_buffer.length-1]);
     }
-    coords_buffer = coords_buffer.concat(tendril_coords);
-    coords_buffer = coords_buffer.concat(tendril_coords.reverse());
-    tendril_coords = [coords_buffer[0]];
-    
-    // now simplify array to flower step size. (which ive decided is leading on running stitch length)
-    for(let i=1; i<coords_buffer.length-1;i++){
-      if(tendril_coords[tendril_coords.length-1].dist(coords_buffer[i]) > FLOWER_STEP_SIZE ||
-          abs(p5.Vector.sub(coords_buffer[i], tendril_coords[tendril_coords.length-1]).angleBetween(p5.Vector.sub(coords_buffer[i+1], coords_buffer[i]))) > 0.5 * PI
-      ) tendril_coords.push(coords_buffer[i])
-    }
-    tendril_coords.push(coords_buffer[coords_buffer.length-1]);
 
     sections[0].embroider();
     while(sections.some(s => !s.embroidered)){
@@ -756,7 +762,7 @@ function sample_nutrient_map(coord){
   if(coord.y < NUTRIENT_BORDER)          falloff = min(falloff, falloff * (coord.y * (1 + BORDER_STEEPNESS) / NUTRIENT_BORDER - BORDER_STEEPNESS));
   if(coord.y > hoop.h - NUTRIENT_BORDER) falloff = min(falloff, falloff * ((coord.y - hoop.h) * (-BORDER_STEEPNESS - 1) / NUTRIENT_BORDER - BORDER_STEEPNESS));
 
-  let photo_sample = cropped_photo.pixels[(floor(coord.x) + width * floor(coord.y))*4] / 127;
+  let photo_sample = cropped_photo.pixels[(floor(coord.x) + cropped_photo.width * floor(coord.y))*4] / 127;
   photo_sample = sin(photo_sample * PI * 0.5 + 1.5 * PI) + 1 // this increases contrast but maybe i dont need that actually
   if(invert_pixels) photo_sample = 2.0 - photo_sample;
 
